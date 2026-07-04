@@ -1,1 +1,4 @@
+set -e
+
 pnpm exec biome check --staged --no-errors-on-unmatched
+pnpm exec nx affected -t test
