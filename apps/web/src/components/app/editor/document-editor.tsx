@@ -9,6 +9,9 @@ import { StarterKit } from '@tiptap/starter-kit';
 import { useState } from 'react';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
+import { ResizableImage } from './resizable-image';
+
+export type ImageMode = 'inline' | 'floating';
 
 export type Orientation = 'portrait' | 'landscape';
 
@@ -40,6 +43,7 @@ export function DocumentEditor() {
       Color,
       TextAlign.configure({ types: ['paragraph'] }),
       Highlight.configure({ multicolor: true }),
+      ResizableImage.configure({ inline: true, allowBase64: true }),
     ],
     content: INITIAL_CONTENT,
     editorProps: {
@@ -50,11 +54,19 @@ export function DocumentEditor() {
   const width = orientation === 'portrait' ? A4_WIDTH : A4_HEIGHT;
   const minHeight = orientation === 'portrait' ? A4_HEIGHT : A4_WIDTH;
 
-  function insertImage(src: string) {
+  function insertImage(src: string, mode: ImageMode) {
     const probe = new window.Image();
     probe.onload = () => {
+      const w = Math.min(360, probe.naturalWidth || 360);
+      if (mode === 'inline') {
+        editor
+          ?.chain()
+          .focus()
+          .setImage({ src, width: w } as { src: string })
+          .run();
+        return;
+      }
       const id = ++nextImageId;
-      const w = Math.min(320, probe.naturalWidth || 320);
       const aspect = probe.naturalWidth / probe.naturalHeight || 1;
       setImages((prev) => [...prev, { id, src, x: 120, y: 140, w, aspect }]);
       setSelectedId(id);
