@@ -63,8 +63,12 @@
 
 .tiptap hr {
   border: none;
-  border-top: 1px solid #d0d5dd;
-  margin: 1.1em 0;
+  border-top: 1.5px solid #d0d5dd;
+  margin: 10px 0;
+}
+
+.tiptap hr.ProseMirror-selectednode {
+  border-top-color: #1f6bff;
 }
 
 .tiptap blockquote {
