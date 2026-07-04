@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="system">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>my-little-pony · design system</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --font-display: 'Poppins', system-ui, sans-serif;
+        --font-body: 'Inter', system-ui, sans-serif;
+
+        --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
+        --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+
+        --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+
+        --dur-fast: 140ms; --dur: 240ms; --dur-slow: 420ms;
+        --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+        --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+        --bg-a: #e7ecf7; --bg-b: #f5f7fd; --glow-1: #c3ceff;
+        --ink: #0d1526; --ink-2: #5a6478; --hairline: rgba(13, 21, 38, 0.09);
+        --blue: #1f6bff; --blue-strong: #1355e6; --blue-deep: #0b3db0; --blue-050: #eaf1ff;
+        --peri-1: #bcc9ff; --peri-2: #8ea0ff; --peri-deep: #5f71d6;
+        --glass-fill: rgba(255, 255, 255, 0.6); --glass-border: rgba(255, 255, 255, 0.85);
+        --glass-shadow: 0 32px 64px -24px rgba(24, 44, 120, 0.32), 0 10px 24px -14px rgba(24, 44, 120, 0.22);
+        --e1: 0 1px 2px rgba(24, 44, 120, 0.08), 0 2px 6px -2px rgba(24, 44, 120, 0.1);
+        --e2: 0 10px 24px -14px rgba(24, 44, 120, 0.22), 0 4px 10px -6px rgba(24, 44, 120, 0.14);
+        --e3: 0 20px 40px -18px rgba(24, 44, 120, 0.3);
+        --field-bg: rgba(255, 255, 255, 0.72); --field-border: rgba(13, 21, 38, 0.1);
+        --blush: #ff9bb0; --error: #e5484d;
+        --card: #ffffff;
+      }
+      [data-theme='dark'] {
+        --bg-a: #070b15; --bg-b: #0b1120; --glow-1: #263882;
+        --ink: #eaf0ff; --ink-2: #9aa6c2; --hairline: rgba(255, 255, 255, 0.1);
+        --blue: #3d82ff; --blue-strong: #2e72f5; --blue-deep: #1b4fc7; --blue-050: rgba(61, 130, 255, 0.14);
+        --peri-1: #6474d8; --peri-2: #4a59c0; --peri-deep: #33409c;
+        --glass-fill: rgba(255, 255, 255, 0.06); --glass-border: rgba(255, 255, 255, 0.14);
+        --glass-shadow: 0 34px 70px -24px rgba(0, 0, 0, 0.66), 0 10px 26px -14px rgba(0, 0, 0, 0.5);
+        --e1: 0 1px 2px rgba(0, 0, 0, 0.4); --e2: 0 10px 26px -14px rgba(0, 0, 0, 0.5); --e3: 0 24px 50px -18px rgba(0, 0, 0, 0.6);
+        --field-bg: rgba(255, 255, 255, 0.05); --field-border: rgba(255, 255, 255, 0.12);
+        --blush: #ff86a0; --error: #ff6369; --card: #101728;
+      }
+      @media (prefers-color-scheme: dark) {
+        [data-theme='system'] {
+          --bg-a: #070b15; --bg-b: #0b1120; --glow-1: #263882;
+          --ink: #eaf0ff; --ink-2: #9aa6c2; --hairline: rgba(255, 255, 255, 0.1);
+          --blue: #3d82ff; --blue-strong: #2e72f5; --blue-deep: #1b4fc7; --blue-050: rgba(61, 130, 255, 0.14);
+          --peri-1: #6474d8; --peri-2: #4a59c0; --peri-deep: #33409c;
+          --glass-fill: rgba(255, 255, 255, 0.06); --glass-border: rgba(255, 255, 255, 0.14);
+          --glass-shadow: 0 34px 70px -24px rgba(0, 0, 0, 0.66), 0 10px 26px -14px rgba(0, 0, 0, 0.5);
+          --e1: 0 1px 2px rgba(0, 0, 0, 0.4); --e2: 0 10px 26px -14px rgba(0, 0, 0, 0.5); --e3: 0 24px 50px -18px rgba(0, 0, 0, 0.6);
+          --field-bg: rgba(255, 255, 255, 0.05); --field-border: rgba(255, 255, 255, 0.12);
+          --blush: #ff86a0; --error: #ff6369; --card: #101728;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; font-family: var(--font-body); color: var(--ink);
+        background: radial-gradient(1000px 700px at 90% -5%, var(--glow-1), transparent 55%), linear-gradient(160deg, var(--bg-b), var(--bg-a));
+        background-attachment: fixed; min-height: 100vh; -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 980px; margin: 0 auto; padding: var(--sp-16) var(--sp-6) var(--sp-16); }
+      .display { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.03em; font-size: 40px; margin: 0; }
+      .lede { color: var(--ink-2); font-size: 16px; margin: var(--sp-3) 0 0; max-width: 60ch; }
+
+      .sec { margin-top: var(--sp-16); }
+      .sec__title { font-family: var(--font-display); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--blue); margin: 0 0 var(--sp-2); }
+      .sec__desc { color: var(--ink-2); font-size: 14px; margin: 0 0 var(--sp-6); }
+
+      .panel { background: var(--card); border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: var(--sp-6); box-shadow: var(--e2); }
+
+      .grid { display: grid; gap: var(--sp-4); }
+      .g-swatch { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+      .swatch { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--hairline); background: var(--card); }
+      .swatch__chip { height: 68px; }
+      .swatch__meta { padding: 10px 12px; }
+      .swatch__name { font-family: var(--font-display); font-weight: 500; font-size: 13px; }
+      .swatch__hex { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+      .type-row { display: flex; align-items: baseline; gap: var(--sp-5); padding: var(--sp-3) 0; border-top: 1px solid var(--hairline); }
+      .type-row:first-child { border-top: 0; }
+      .type-tag { flex: 0 0 130px; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+      .d40 { font-family: var(--font-display); font-weight: 600; font-size: 40px; letter-spacing: -0.03em; }
+      .d30 { font-family: var(--font-display); font-weight: 600; font-size: 30px; letter-spacing: -0.025em; }
+      .d24 { font-family: var(--font-display); font-weight: 600; font-size: 24px; letter-spacing: -0.02em; }
+      .d20 { font-family: var(--font-display); font-weight: 500; font-size: 20px; }
+      .b16 { font-family: var(--font-body); font-weight: 400; font-size: 16px; }
+      .b15 { font-family: var(--font-body); font-weight: 400; font-size: 15px; }
+      .l13 { font-family: var(--font-display); font-weight: 500; font-size: 13px; }
+      .c12 { font-family: var(--font-body); font-weight: 400; font-size: 12.5px; color: var(--ink-2); }
+
+      .space-row { display: flex; align-items: center; gap: var(--sp-4); padding: 6px 0; }
+      .space-bar { height: 16px; background: linear-gradient(90deg, var(--blue), var(--peri-2)); border-radius: 4px; }
+      .space-tag { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; flex: 0 0 130px; }
+
+      .radii { display: flex; flex-wrap: wrap; gap: var(--sp-5); }
+      .radii div { width: 96px; height: 72px; background: var(--blue-050); border: 1.5px solid var(--blue); display: grid; place-items: end center; padding-bottom: 6px; font-size: 11px; color: var(--blue-strong); font-weight: 600; }
+
+      .elevs { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-6); }
+      .elev { height: 96px; background: var(--card); border-radius: var(--r-md); display: grid; place-items: center; font-size: 12px; color: var(--ink-2); }
+      .glassbg { border-radius: var(--r-lg); padding: var(--sp-8); background: linear-gradient(120deg, #1f6bff, #8ea0ff 60%, #ff9bb0); }
+      .glasscard { background: var(--glass-fill); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); border-radius: var(--r-lg); padding: var(--sp-6); backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%); color: #0d1526; }
+
+      .motion { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-4); }
+      .track { background: var(--field-bg); border: 1px solid var(--field-border); border-radius: var(--r-pill); height: 40px; position: relative; overflow: hidden; }
+      .dot { position: absolute; top: 5px; left: 5px; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(150deg, var(--blue), var(--blue-deep)); }
+      .m1 .dot { animation: slide 1.8s var(--ease) infinite alternate; }
+      .m2 .dot { animation: slide 1.8s var(--ease-back) infinite alternate; }
+      .m3 .dot { animation: slide 1.8s linear infinite alternate; }
+      @keyframes slide { to { left: calc(100% - 35px); } }
+
+      /* component samples reuse the mockup styles */
+      .comp { display: grid; gap: var(--sp-5); max-width: 380px; }
+      .field__label { display: block; font-family: var(--font-display); font-weight: 500; font-size: 13px; margin-bottom: var(--sp-2); }
+      .input { width: 100%; font-family: var(--font-body); font-size: 15px; color: var(--ink); padding: 13px 14px; border-radius: var(--r-md); background: var(--field-bg); border: 1px solid var(--field-border); outline: none; }
+      .input.is-focus { border-color: var(--blue); box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 18%, transparent); }
+      .btn { width: 100%; font-family: var(--font-display); font-weight: 600; font-size: 15px; color: #fff; padding: 14px; border: 0; border-radius: var(--r-md); cursor: pointer; background: linear-gradient(135deg, var(--blue), var(--blue-deep)); box-shadow: 0 12px 24px -10px var(--blue), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+      .btn.ghost { background: transparent; color: var(--blue); border: 1px solid var(--field-border); box-shadow: none; }
+      .link { color: var(--blue); font-weight: 500; font-size: 14px; text-decoration: none; }
+      .chk { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
+      .chk__box { width: 19px; height: 19px; border-radius: 6px; background: var(--blue); border: 1.5px solid var(--blue); display: grid; place-items: center; }
+      .chk__box svg { width: 12px; height: 12px; color: #fff; }
+
+      .toggle { position: fixed; top: 20px; right: 20px; display: flex; gap: 2px; padding: 4px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: var(--r-pill); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); box-shadow: var(--e2); z-index: 10; }
+      .toggle button { width: 38px; height: 30px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+      .toggle button svg { width: 16px; height: 16px; }
+      .toggle button[aria-pressed='true'] { background: var(--blue); color: #fff; }
+    </style>
+  </head>
+  <body>
+    <div class="toggle" role="group" aria-label="Tema">
+      <button data-theme-set="light" aria-pressed="false" title="Claro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+      <button data-theme-set="dark" aria-pressed="false" title="Escuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button data-theme-set="system" aria-pressed="true" title="Sistema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
+    </div>
+
+    <div class="wrap">
+      <header>
+        <h1 class="display">Design System</h1>
+        <p class="lede">Os tokens que definem a cara do my-little-pony. Esta é a fonte de verdade visual — na PR3 vira CSS vars + tema do Tailwind, com os mesmos valores. Alterne o tema no canto para ver claro/escuro.</p>
+      </header>
+
+      <!-- COLORS -->
+      <section class="sec">
+        <p class="sec__title">01 · Cores</p>
+        <p class="sec__desc">Azul de ação, periwinkle do mascote, neutros frios e acentos. Os valores mudam entre claro e escuro.</p>
+        <div class="panel">
+          <div class="grid g-swatch">
+            <div class="swatch"><div class="swatch__chip" style="background:var(--blue)"></div><div class="swatch__meta"><div class="swatch__name">blue</div><div class="swatch__hex">#1F6BFF · ação</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--blue-strong)"></div><div class="swatch__meta"><div class="swatch__name">blue-strong</div><div class="swatch__hex">#1355E6 · hover</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--blue-deep)"></div><div class="swatch__meta"><div class="swatch__name">blue-deep</div><div class="swatch__hex">#0B3DB0 · gradiente</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--peri-1)"></div><div class="swatch__meta"><div class="swatch__name">peri-1</div><div class="swatch__hex">#BCC9FF</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--peri-2)"></div><div class="swatch__meta"><div class="swatch__name">peri-2</div><div class="swatch__hex">#8EA0FF</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--peri-deep)"></div><div class="swatch__meta"><div class="swatch__name">peri-deep</div><div class="swatch__hex">#5F71D6</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--ink)"></div><div class="swatch__meta"><div class="swatch__name">ink</div><div class="swatch__hex">texto principal</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--ink-2)"></div><div class="swatch__meta"><div class="swatch__name">ink-2</div><div class="swatch__hex">texto secundário</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--blush)"></div><div class="swatch__meta"><div class="swatch__name">blush</div><div class="swatch__hex">#FF9BB0 · rubor</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--error)"></div><div class="swatch__meta"><div class="swatch__name">error</div><div class="swatch__hex">#E5484D</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:var(--blue-050)"></div><div class="swatch__meta"><div class="swatch__name">blue-050</div><div class="swatch__hex">tint suave</div></div></div>
+            <div class="swatch"><div class="swatch__chip" style="background:linear-gradient(160deg,var(--bg-b),var(--bg-a))"></div><div class="swatch__meta"><div class="swatch__name">bg</div><div class="swatch__hex">fundo (gradiente)</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TYPE -->
+      <section class="sec">
+        <p class="sec__title">02 · Tipografia</p>
+        <p class="sec__desc">Poppins para títulos, botões e labels (personalidade). Inter para inputs, corpo e dados (legibilidade).</p>
+        <div class="panel">
+          <div class="type-row"><span class="type-tag">Display · Poppins 600 · 40</span><span class="d40">Bem-vindo de volta</span></div>
+          <div class="type-row"><span class="type-tag">H1 · Poppins 600 · 30</span><span class="d30">Bem-vindo de volta</span></div>
+          <div class="type-row"><span class="type-tag">H2 · Poppins 600 · 24</span><span class="d24">Entre na sua conta</span></div>
+          <div class="type-row"><span class="type-tag">Subhead · Poppins 500 · 20</span><span class="d20">Entre na sua conta</span></div>
+          <div class="type-row"><span class="type-tag">Body · Inter 400 · 16</span><span class="b16">Entre para continuar de onde parou.</span></div>
+          <div class="type-row"><span class="type-tag">Input · Inter 400 · 15</span><span class="b15">demo@cv.app</span></div>
+          <div class="type-row"><span class="type-tag">Label · Poppins 500 · 13</span><span class="l13">E-mail</span></div>
+          <div class="type-row"><span class="type-tag">Caption · Inter 400 · 12.5</span><span class="c12">Demo — use demo@cv.app e 123456</span></div>
+        </div>
+      </section>
+
+      <!-- SPACING -->
+      <section class="sec">
+        <p class="sec__title">03 · Espaçamento</p>
+        <p class="sec__desc">Escala base 4px. Usada para paddings, gaps e ritmo vertical.</p>
+        <div class="panel">
+          <div class="space-row"><span class="space-tag">sp-1 · 4</span><span class="space-bar" style="width:4px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-2 · 8</span><span class="space-bar" style="width:8px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-3 · 12</span><span class="space-bar" style="width:12px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-4 · 16</span><span class="space-bar" style="width:16px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-5 · 20</span><span class="space-bar" style="width:20px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-6 · 24</span><span class="space-bar" style="width:24px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-8 · 32</span><span class="space-bar" style="width:32px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-10 · 40</span><span class="space-bar" style="width:40px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-12 · 48</span><span class="space-bar" style="width:48px"></span></div>
+          <div class="space-row"><span class="space-tag">sp-16 · 64</span><span class="space-bar" style="width:64px"></span></div>
+        </div>
+      </section>
+
+      <!-- RADII -->
+      <section class="sec">
+        <p class="sec__title">04 · Raios</p>
+        <p class="sec__desc">Cantos arredondados, do input ao card.</p>
+        <div class="panel">
+          <div class="radii">
+            <div style="border-radius:var(--r-sm)">sm · 10</div>
+            <div style="border-radius:var(--r-md)">md · 14</div>
+            <div style="border-radius:var(--r-lg)">lg · 20</div>
+            <div style="border-radius:var(--r-xl)">xl · 28</div>
+            <div style="border-radius:var(--r-pill)">pill</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ELEVATION -->
+      <section class="sec">
+        <p class="sec__title">05 · Sombras / Elevação</p>
+        <p class="sec__desc">Três níveis suaves em azul, no estilo Apple.</p>
+        <div class="panel">
+          <div class="elevs">
+            <div class="elev" style="box-shadow:var(--e1)">e1 · sutil</div>
+            <div class="elev" style="box-shadow:var(--e2)">e2 · card</div>
+            <div class="elev" style="box-shadow:var(--e3)">e3 · destaque</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GLASS -->
+      <section class="sec">
+        <p class="sec__title">06 · Vidro / Blur</p>
+        <p class="sec__desc">O truque da Apple: <code>backdrop-filter: blur + saturate</code>. O card do login usa este material.</p>
+        <div class="glassbg">
+          <div class="glasscard">
+            <strong style="font-family:var(--font-display)">glass</strong>
+            <p style="margin:6px 0 0;font-size:14px">blur(26px) · saturate(150%) · borda branca translúcida · sombra em camadas</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- MOTION -->
+      <section class="sec">
+        <p class="sec__title">07 · Movimento</p>
+        <p class="sec__desc">Durações: fast 140 · base 240 · slow 420. Easings abaixo (compare as curvas).</p>
+        <div class="panel">
+          <div class="motion">
+            <div><div class="track m1"><span class="dot"></span></div><p class="c12" style="margin:8px 0 0">ease · padrão</p></div>
+            <div><div class="track m2"><span class="dot"></span></div><p class="c12" style="margin:8px 0 0">ease-back · pops</p></div>
+            <div><div class="track m3"><span class="dot"></span></div><p class="c12" style="margin:8px 0 0">linear · loaders</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPONENTS -->
+      <section class="sec">
+        <p class="sec__title">08 · Componentes</p>
+        <p class="sec__desc">Os tokens acima, aplicados. É assim que viram componentes na PR3/PR4.</p>
+        <div class="panel">
+          <div class="comp">
+            <div><label class="field__label">E-mail</label><input class="input" value="voce@exemplo.com" readonly /></div>
+            <div><label class="field__label">Senha (foco)</label><input class="input is-focus" type="password" value="123456" readonly /></div>
+            <label class="chk"><span class="chk__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></span> Lembrar de mim</label>
+            <button class="btn">Entrar</button>
+            <button class="btn ghost">Ação secundária</button>
+            <a class="link" href="#">Esqueceu a senha?</a>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const root = document.documentElement;
+      const btns = [...document.querySelectorAll('[data-theme-set]')];
+      btns.forEach((b) =>
+        b.addEventListener('click', () => {
+          root.setAttribute('data-theme', b.dataset.themeSet);
+          btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        }),
+      );
+    </script>
+  </body>
+</html>

@@ -1,0 +1,120 @@
+/**
+ * my-little-pony — design tokens (fonte de verdade)
+ * Fontes injetadas por next/font (--font-poppins / --font-inter).
+ * Tema via next-themes: :root = claro, [data-theme='dark'] = escuro
+ * (o modo "sistema" é resolvido pelo next-themes para light/dark).
+ */
+:root {
+  --font-display: var(--font-poppins), system-ui, sans-serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+
+  /* spacing (base 4px) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* radii */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* motion */
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* color — light */
+  --bg-a: #e7ecf7;
+  --bg-b: #f5f7fd;
+  --glow-1: #c3ceff;
+  --ink: #0d1526;
+  --ink-2: #5a6478;
+  --hairline: rgba(13, 21, 38, 0.09);
+
+  --blue: #1f6bff;
+  --blue-strong: #1355e6;
+  --blue-deep: #0b3db0;
+  --blue-050: #eaf1ff;
+
+  --peri-1: #cdd8ff;
+  --peri-2: #97a8ff;
+  --peri-deep: #5f71d6;
+
+  --mane-1: #6a8bff;
+  --mane-2: #4ac8ff;
+  --mane-3: #9d6bff;
+  --horn: #eaf1ff;
+  --hoof: #b6c2ff;
+
+  --blush: #ff9bb0;
+  --success: #17b26a;
+  --error: #e5484d;
+
+  --glass-fill: rgba(255, 255, 255, 0.62);
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --field-bg: rgba(255, 255, 255, 0.72);
+  --field-border: rgba(13, 21, 38, 0.1);
+  --shadow-mascot: rgba(70, 90, 180, 0.24);
+
+  /* elevation */
+  --glass-shadow:
+    0 40px 80px -30px rgba(24, 44, 120, 0.34), 0 12px 28px -16px rgba(24, 44, 120, 0.22);
+  --e1: 0 1px 2px rgba(24, 44, 120, 0.08), 0 2px 6px -2px rgba(24, 44, 120, 0.1);
+  --e2: 0 10px 24px -14px rgba(24, 44, 120, 0.22), 0 4px 10px -6px rgba(24, 44, 120, 0.14);
+  --e3: 0 20px 40px -18px rgba(24, 44, 120, 0.3);
+
+  /* surface for solid cards */
+  --card: #ffffff;
+}
+
+[data-theme="dark"] {
+  --bg-a: #070b15;
+  --bg-b: #0b1120;
+  --glow-1: #263882;
+  --ink: #eaf0ff;
+  --ink-2: #9aa6c2;
+  --hairline: rgba(255, 255, 255, 0.1);
+
+  --blue: #3d82ff;
+  --blue-strong: #2e72f5;
+  --blue-deep: #1b4fc7;
+  --blue-050: rgba(61, 130, 255, 0.14);
+
+  --peri-1: #7f92e0;
+  --peri-2: #5566c4;
+  --peri-deep: #3a479c;
+
+  --mane-1: #7f9cff;
+  --mane-2: #5fd0ff;
+  --mane-3: #b18bff;
+  --horn: #cdd8ff;
+  --hoof: #6474c4;
+
+  --blush: #ff86a0;
+  --success: #3ddc90;
+  --error: #ff6369;
+
+  --glass-fill: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --field-bg: rgba(255, 255, 255, 0.05);
+  --field-border: rgba(255, 255, 255, 0.12);
+  --shadow-mascot: rgba(0, 0, 0, 0.5);
+
+  --glass-shadow: 0 40px 84px -28px rgba(0, 0, 0, 0.7), 0 12px 30px -16px rgba(0, 0, 0, 0.5);
+  --e1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --e2: 0 10px 26px -14px rgba(0, 0, 0, 0.5);
+  --e3: 0 24px 50px -18px rgba(0, 0, 0, 0.6);
+
+  --card: #101728;
+}
