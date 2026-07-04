@@ -1,7 +1,6 @@
 'use client';
 
 import { Highlight } from '@tiptap/extension-highlight';
-import { Image } from '@tiptap/extension-image';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
@@ -9,6 +8,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { useState } from 'react';
 import { EditorToolbar } from './editor-toolbar';
+import { FloatingImage, type FloatingImageData } from './floating-image';
 
 export type Orientation = 'portrait' | 'landscape';
 
@@ -17,26 +17,29 @@ const A4_WIDTH = 794;
 const A4_HEIGHT = 1123;
 
 const INITIAL_CONTENT = `
-  <h1>Documento sem título</h1>
-  <p>Comece a escrever aqui. Use a barra acima para formatar: fonte, tamanho, cor, alinhamento, listas e mais.</p>
+  <p><strong><span style="font-size: 30px">Documento sem título</span></strong></p>
+  <p>Comece a escrever aqui. Use a barra acima para formatar: fonte, tamanho, cor, alinhamento, listas e mais — e insira imagens para arrastar onde quiser.</p>
 `;
+
+let nextImageId = 0;
 
 export function DocumentEditor() {
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [pageBg, setPageBg] = useState('#ffffff');
+  const [images, setImages] = useState<FloatingImageData[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ underline: false }),
+      StarterKit.configure({ heading: false, underline: false }),
       Underline,
       TextStyle,
       FontFamily,
       FontSize,
       Color,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      TextAlign.configure({ types: ['paragraph'] }),
       Highlight.configure({ multicolor: true }),
-      Image.configure({ inline: false, allowBase64: true }),
     ],
     content: INITIAL_CONTENT,
     editorProps: {
@@ -47,23 +50,60 @@ export function DocumentEditor() {
   const width = orientation === 'portrait' ? A4_WIDTH : A4_HEIGHT;
   const minHeight = orientation === 'portrait' ? A4_HEIGHT : A4_WIDTH;
 
+  function insertImage(src: string) {
+    const probe = new window.Image();
+    probe.onload = () => {
+      const id = ++nextImageId;
+      const w = Math.min(320, probe.naturalWidth || 320);
+      const aspect = probe.naturalWidth / probe.naturalHeight || 1;
+      setImages((prev) => [...prev, { id, src, x: 120, y: 140, w, aspect }]);
+      setSelectedId(id);
+    };
+    probe.src = src;
+  }
+
+  function updateImage(id: number, patch: Partial<FloatingImageData>) {
+    setImages((prev) => prev.map((image) => (image.id === id ? { ...image, ...patch } : image)));
+  }
+
+  function removeImage(id: number) {
+    setImages((prev) => prev.filter((image) => image.id !== id));
+    setSelectedId(null);
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <EditorToolbar
         editor={editor}
         orientation={orientation}
         onOrientationChange={setOrientation}
+        onInsertImage={insertImage}
         onPageBgChange={setPageBg}
       />
 
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-muted/40 p-6 md:p-10">
         <div
-          className="mx-auto cursor-text shadow-lg ring-1 ring-black/5"
+          className="relative mx-auto shadow-lg ring-1 ring-black/5"
           style={{ width, minHeight, background: pageBg }}
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedId(null);
+          }}
         >
           <div className="px-16 py-[72px]">
             <EditorContent editor={editor} />
           </div>
+
+          {images.map((image) => (
+            <FloatingImage
+              key={image.id}
+              data={image}
+              selected={selectedId === image.id}
+              bounds={{ w: width, h: minHeight }}
+              onSelect={() => setSelectedId(image.id)}
+              onChange={(patch) => updateImage(image.id, patch)}
+              onRemove={() => removeImage(image.id)}
+            />
+          ))}
         </div>
       </div>
     </div>
