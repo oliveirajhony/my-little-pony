@@ -23,7 +23,7 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react';
-import { type ReactNode, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -36,27 +36,19 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Orientation } from './document-editor';
+import { FontPicker } from './font-picker';
 
 type Props = {
   editor: Editor | null;
   orientation: Orientation;
   onOrientationChange: (value: Orientation) => void;
+  onInsertImage: (src: string) => void;
   onPageBgChange: (value: string) => void;
 };
 
-const FONTS = [
-  { value: 'default', label: 'Fonte padrão' },
-  { value: 'var(--font-inter)', label: 'Inter' },
-  { value: 'var(--font-poppins)', label: 'Poppins' },
-  { value: 'Arial, sans-serif', label: 'Arial' },
-  { value: 'Georgia, serif', label: 'Georgia' },
-  { value: '"Times New Roman", serif', label: 'Times New Roman' },
-  { value: '"Courier New", monospace', label: 'Courier New' },
-];
-
 const SIZES = ['12px', '14px', '16px', '18px', '24px', '30px', '36px', '48px'];
-
 const TEXT_COLORS = [
   '#1d1d1f',
   '#5a6478',
@@ -70,16 +62,23 @@ const TEXT_COLORS = [
 const HIGHLIGHTS = ['#fff3bf', '#d3f9d8', '#d0ebff', '#ffd8a8', '#ffc9c9', '#e5dbff'];
 const PAGE_BGS = ['#ffffff', '#fbfbfd', '#f7f5ef', '#eef3fb', '#f4f0fb', '#1d1d1f'];
 
+function Hint({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function Swatches({
   colors,
   onPick,
-  allowReset,
   onReset,
 }: {
   colors: string[];
   onPick: (color: string) => void;
-  allowReset?: boolean;
-  onReset?: () => void;
+  onReset: () => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -90,16 +89,14 @@ function Swatches({
             type="button"
             aria-label={color}
             onClick={() => onPick(color)}
-            className="size-6 rounded-md border ring-offset-2 transition hover:scale-110"
+            className="size-6 rounded-md border transition hover:scale-110"
             style={{ background: color }}
           />
         ))}
       </div>
-      {allowReset ? (
-        <Button variant="ghost" size="sm" className="h-7 justify-start" onClick={onReset}>
-          Remover
-        </Button>
-      ) : null}
+      <Button variant="ghost" size="sm" className="h-7 justify-start" onClick={onReset}>
+        Remover
+      </Button>
     </div>
   );
 }
@@ -115,11 +112,13 @@ function ColorPopover({
 }) {
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-8" aria-label={label}>
-          {icon}
-        </Button>
-      </PopoverTrigger>
+      <Hint label={label}>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="size-8" aria-label={label}>
+            {icon}
+          </Button>
+        </PopoverTrigger>
+      </Hint>
       <PopoverContent align="start" className="w-auto p-3">
         {children}
       </PopoverContent>
@@ -127,9 +126,13 @@ function ColorPopover({
   );
 }
 
-export function EditorToolbar({ editor, orientation, onOrientationChange, onPageBgChange }: Props) {
-  const fileInput = useRef<HTMLInputElement>(null);
-
+export function EditorToolbar({
+  editor,
+  orientation,
+  onOrientationChange,
+  onInsertImage,
+  onPageBgChange,
+}: Props) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => {
@@ -151,13 +154,6 @@ export function EditorToolbar({ editor, orientation, onOrientationChange, onPage
             : e.isActive({ textAlign: 'justify' })
               ? 'justify'
               : 'left',
-        block: e.isActive('heading', { level: 1 })
-          ? 'h1'
-          : e.isActive('heading', { level: 2 })
-            ? 'h2'
-            : e.isActive('heading', { level: 3 })
-              ? 'h3'
-              : 'paragraph',
         fontFamily: (style.fontFamily as string) ?? 'default',
         fontSize: (style.fontSize as string) ?? 'default',
       };
@@ -168,94 +164,65 @@ export function EditorToolbar({ editor, orientation, onOrientationChange, onPage
 
   const chain = () => editor.chain().focus();
 
-  function onPickImage(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file || !editor) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      editor
-        .chain()
-        .focus()
-        .setImage({ src: reader.result as string })
-        .run();
+  function pickFile() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => onInsertImage(reader.result as string);
+      reader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
-    event.target.value = '';
+    input.click();
   }
 
   return (
     <div className="flex flex-wrap items-center gap-1 rounded-xl border bg-card p-1.5 shadow-sm">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        aria-label="Desfazer"
-        disabled={!state.canUndo}
-        onClick={() => chain().undo().run()}
-      >
-        <Undo2 />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        aria-label="Refazer"
-        disabled={!state.canRedo}
-        onClick={() => chain().redo().run()}
-      >
-        <Redo2 />
-      </Button>
+      <Hint label="Desfazer">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Desfazer"
+          disabled={!state.canUndo}
+          onClick={() => chain().undo().run()}
+        >
+          <Undo2 />
+        </Button>
+      </Hint>
+      <Hint label="Refazer">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Refazer"
+          disabled={!state.canRedo}
+          onClick={() => chain().redo().run()}
+        >
+          <Redo2 />
+        </Button>
+      </Hint>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <Select
-        value={state.block}
-        onValueChange={(value) => {
-          if (value === 'paragraph') chain().setParagraph().run();
-          else
-            chain()
-              .toggleHeading({ level: Number(value.slice(1)) as 1 | 2 | 3 })
-              .run();
-        }}
-      >
-        <SelectTrigger size="sm" className="w-[130px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="paragraph">Texto</SelectItem>
-          <SelectItem value="h1">Título 1</SelectItem>
-          <SelectItem value="h2">Título 2</SelectItem>
-          <SelectItem value="h3">Título 3</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={FONTS.some((f) => f.value === state.fontFamily) ? state.fontFamily : 'default'}
-        onValueChange={(value) => {
-          if (value === 'default') chain().unsetFontFamily().run();
-          else chain().setFontFamily(value).run();
-        }}
-      >
-        <SelectTrigger size="sm" className="w-[140px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {FONTS.map((font) => (
-            <SelectItem key={font.value} value={font.value} style={{ fontFamily: font.value }}>
-              {font.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <FontPicker
+        current={state.fontFamily}
+        onPick={(family) =>
+          family === 'default'
+            ? chain().unsetFontFamily().run()
+            : chain().setFontFamily(family).run()
+        }
+      />
 
       <Select
         value={SIZES.includes(state.fontSize) ? state.fontSize : 'default'}
-        onValueChange={(value) => {
-          if (value === 'default') chain().unsetFontSize().run();
-          else chain().setFontSize(value).run();
-        }}
+        onValueChange={(value) =>
+          value === 'default' ? chain().unsetFontSize().run() : chain().setFontSize(value).run()
+        }
       >
-        <SelectTrigger size="sm" className="w-[76px]">
+        <SelectTrigger size="sm" className="w-[76px]" aria-label="Tamanho da fonte">
           <SelectValue placeholder="16" />
         </SelectTrigger>
         <SelectContent>
@@ -270,44 +237,51 @@ export function EditorToolbar({ editor, orientation, onOrientationChange, onPage
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <Toggle
-        size="sm"
-        pressed={state.isBold}
-        onPressedChange={() => chain().toggleBold().run()}
-        aria-label="Negrito"
-      >
-        <Bold />
-      </Toggle>
-      <Toggle
-        size="sm"
-        pressed={state.isItalic}
-        onPressedChange={() => chain().toggleItalic().run()}
-        aria-label="Itálico"
-      >
-        <Italic />
-      </Toggle>
-      <Toggle
-        size="sm"
-        pressed={state.isUnderline}
-        onPressedChange={() => chain().toggleUnderline().run()}
-        aria-label="Sublinhado"
-      >
-        <UnderlineIcon />
-      </Toggle>
-      <Toggle
-        size="sm"
-        pressed={state.isStrike}
-        onPressedChange={() => chain().toggleStrike().run()}
-        aria-label="Tachado"
-      >
-        <Strikethrough />
-      </Toggle>
+      <Hint label="Negrito">
+        <Toggle
+          size="sm"
+          pressed={state.isBold}
+          onPressedChange={() => chain().toggleBold().run()}
+          aria-label="Negrito"
+        >
+          <Bold />
+        </Toggle>
+      </Hint>
+      <Hint label="Itálico">
+        <Toggle
+          size="sm"
+          pressed={state.isItalic}
+          onPressedChange={() => chain().toggleItalic().run()}
+          aria-label="Itálico"
+        >
+          <Italic />
+        </Toggle>
+      </Hint>
+      <Hint label="Sublinhado">
+        <Toggle
+          size="sm"
+          pressed={state.isUnderline}
+          onPressedChange={() => chain().toggleUnderline().run()}
+          aria-label="Sublinhado"
+        >
+          <UnderlineIcon />
+        </Toggle>
+      </Hint>
+      <Hint label="Tachado">
+        <Toggle
+          size="sm"
+          pressed={state.isStrike}
+          onPressedChange={() => chain().toggleStrike().run()}
+          aria-label="Tachado"
+        >
+          <Strikethrough />
+        </Toggle>
+      </Hint>
 
       <ColorPopover icon={<Baseline />} label="Cor do texto">
         <Swatches
           colors={TEXT_COLORS}
           onPick={(color) => chain().setColor(color).run()}
-          allowReset
           onReset={() => chain().unsetColor().run()}
         />
       </ColorPopover>
@@ -315,7 +289,6 @@ export function EditorToolbar({ editor, orientation, onOrientationChange, onPage
         <Swatches
           colors={HIGHLIGHTS}
           onPick={(color) => chain().toggleHighlight({ color }).run()}
-          allowReset
           onReset={() => chain().unsetHighlight().run()}
         />
       </ColorPopover>
@@ -328,57 +301,72 @@ export function EditorToolbar({ editor, orientation, onOrientationChange, onPage
         value={state.align}
         onValueChange={(value) => value && chain().setTextAlign(value).run()}
       >
-        <ToggleGroupItem value="left" aria-label="Alinhar à esquerda">
-          <AlignLeft />
-        </ToggleGroupItem>
-        <ToggleGroupItem value="center" aria-label="Centralizar">
-          <AlignCenter />
-        </ToggleGroupItem>
-        <ToggleGroupItem value="right" aria-label="Alinhar à direita">
-          <AlignRight />
-        </ToggleGroupItem>
-        <ToggleGroupItem value="justify" aria-label="Justificar">
-          <AlignJustify />
-        </ToggleGroupItem>
+        <Hint label="Alinhar à esquerda">
+          <ToggleGroupItem value="left" aria-label="Alinhar à esquerda">
+            <AlignLeft />
+          </ToggleGroupItem>
+        </Hint>
+        <Hint label="Centralizar">
+          <ToggleGroupItem value="center" aria-label="Centralizar">
+            <AlignCenter />
+          </ToggleGroupItem>
+        </Hint>
+        <Hint label="Alinhar à direita">
+          <ToggleGroupItem value="right" aria-label="Alinhar à direita">
+            <AlignRight />
+          </ToggleGroupItem>
+        </Hint>
+        <Hint label="Justificar">
+          <ToggleGroupItem value="justify" aria-label="Justificar">
+            <AlignJustify />
+          </ToggleGroupItem>
+        </Hint>
       </ToggleGroup>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <Toggle
-        size="sm"
-        pressed={state.isBullet}
-        onPressedChange={() => chain().toggleBulletList().run()}
-        aria-label="Lista com marcadores"
-      >
-        <List />
-      </Toggle>
-      <Toggle
-        size="sm"
-        pressed={state.isOrdered}
-        onPressedChange={() => chain().toggleOrderedList().run()}
-        aria-label="Lista numerada"
-      >
-        <ListOrdered />
-      </Toggle>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        aria-label="Linha horizontal"
-        onClick={() => chain().setHorizontalRule().run()}
-      >
-        <Minus />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        aria-label="Inserir imagem"
-        onClick={() => fileInput.current?.click()}
-      >
-        <ImagePlus />
-      </Button>
-      <input ref={fileInput} type="file" accept="image/*" hidden onChange={onPickImage} />
+      <Hint label="Lista com marcadores">
+        <Toggle
+          size="sm"
+          pressed={state.isBullet}
+          onPressedChange={() => chain().toggleBulletList().run()}
+          aria-label="Lista com marcadores"
+        >
+          <List />
+        </Toggle>
+      </Hint>
+      <Hint label="Lista numerada">
+        <Toggle
+          size="sm"
+          pressed={state.isOrdered}
+          onPressedChange={() => chain().toggleOrderedList().run()}
+          aria-label="Lista numerada"
+        >
+          <ListOrdered />
+        </Toggle>
+      </Hint>
+      <Hint label="Linha horizontal">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Linha horizontal"
+          onClick={() => chain().setHorizontalRule().run()}
+        >
+          <Minus />
+        </Button>
+      </Hint>
+      <Hint label="Inserir imagem">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label="Inserir imagem"
+          onClick={pickFile}
+        >
+          <ImagePlus />
+        </Button>
+      </Hint>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
@@ -388,19 +376,22 @@ export function EditorToolbar({ editor, orientation, onOrientationChange, onPage
         value={orientation}
         onValueChange={(value) => value && onOrientationChange(value as Orientation)}
       >
-        <ToggleGroupItem value="portrait" aria-label="Retrato">
-          <RectangleVertical />
-        </ToggleGroupItem>
-        <ToggleGroupItem value="landscape" aria-label="Paisagem">
-          <RectangleHorizontal />
-        </ToggleGroupItem>
+        <Hint label="Retrato">
+          <ToggleGroupItem value="portrait" aria-label="Retrato">
+            <RectangleVertical />
+          </ToggleGroupItem>
+        </Hint>
+        <Hint label="Paisagem">
+          <ToggleGroupItem value="landscape" aria-label="Paisagem">
+            <RectangleHorizontal />
+          </ToggleGroupItem>
+        </Hint>
       </ToggleGroup>
 
       <ColorPopover icon={<PaintBucket />} label="Cor da página">
         <Swatches
           colors={PAGE_BGS}
           onPick={onPageBgChange}
-          allowReset
           onReset={() => onPageBgChange('#ffffff')}
         />
       </ColorPopover>
