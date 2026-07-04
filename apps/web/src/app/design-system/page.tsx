@@ -14,6 +14,7 @@ const COLORS: { group: string; items: { name: string; value: string; note?: stri
       { name: 'blue-strong', value: 'var(--blue-strong)', note: 'hover' },
       { name: 'blue-deep', value: 'var(--blue-deep)', note: 'gradiente' },
       { name: 'blue-050', value: 'var(--blue-050)', note: 'tint' },
+      { name: 'brand-gradient', value: 'var(--brand-gradient)', note: 'marca' },
     ],
   },
   {
@@ -27,6 +28,7 @@ const COLORS: { group: string; items: { name: string; value: string; note?: stri
       { name: 'mane-3', value: 'var(--mane-3)', note: 'crina' },
       { name: 'horn', value: 'var(--horn)', note: 'chifre' },
       { name: 'hoof', value: 'var(--hoof)', note: 'casco' },
+      { name: 'mane-gradient', value: 'var(--mane-gradient)', note: 'crina/magia' },
     ],
   },
   {
@@ -51,6 +53,7 @@ const TYPE = [
   { tag: 'Input · Inter 400 · 15', cls: 'b15', sample: 'demo@mlp.app' },
   { tag: 'Label · Poppins 500 · 13', cls: 'l13', sample: 'E-mail' },
   { tag: 'Caption · Inter 400 · 12.5', cls: 'c12', sample: 'Demo — use demo@mlp.app e 123456' },
+  { tag: 'Mono · JetBrains 500 · 13', cls: 'mono', sample: 'demo@mlp.app · /doc/a1b2c3' },
 ] as const;
 
 const SPACING = [
@@ -98,6 +101,7 @@ const TYPE_STYLE: Record<string, CSSProperties> = {
   b15: { fontFamily: 'var(--font-body)', fontWeight: 400, fontSize: 15 },
   l13: { fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 13 },
   c12: { fontFamily: 'var(--font-body)', fontWeight: 400, fontSize: 12.5, color: 'var(--ink-2)' },
+  mono: { fontFamily: 'var(--font-mono)', fontWeight: 500, fontSize: 13 },
 };
 
 function CheckIcon() {

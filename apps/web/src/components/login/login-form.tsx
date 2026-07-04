@@ -3,7 +3,7 @@
 import { type FormEvent, useId, useState } from 'react';
 import { AUTH_MESSAGES, authenticate, DEMO_USER } from '../../lib/mock-auth';
 import { isValidEmail } from '../../lib/validation';
-import { AlertIcon, CheckIcon, DocMarkIcon, EyeIcon, EyeOffIcon, GitHubIcon } from '../icons';
+import { AlertIcon, CheckIcon, DocIcon, EyeIcon, EyeOffIcon, GitHubIcon } from '../icons';
 import styles from './login-form.module.css';
 
 const REPO_URL = 'https://github.com/oliveirajhony/my-little-pony';
@@ -65,7 +65,7 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
     >
       <div className={styles.brand}>
         <span className={styles.mark}>
-          <DocMarkIcon />
+          <DocIcon />
         </span>
         <span className={styles.name}>my-little-pony</span>
         <span className={styles.tag}>Beta</span>

@@ -14,7 +14,8 @@
       "!**/.nx",
       "!**/next-env.d.ts",
       "!**/*.min.js",
-      "!docs/mockups"
+      "!docs/mockups",
+      "!**/public"
     ]
   },
   "formatter": {
