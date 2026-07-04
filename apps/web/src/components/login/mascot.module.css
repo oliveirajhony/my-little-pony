@@ -1,0 +1,81 @@
+.mascot {
+  position: relative;
+  z-index: 1;
+  width: min(320px, 40vw);
+  animation: floaty 6s var(--ease) infinite;
+}
+
+.mascot svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -12px;
+  }
+}
+
+/* Eye states — open / closed (arcs) / happy (^^). Toggled by root classes. */
+.eyesOpen,
+.eyesClosed,
+.eyesHappy {
+  transition: opacity 110ms var(--ease);
+}
+
+.eyesClosed,
+.eyesHappy {
+  opacity: 0;
+}
+
+.closed .eyesOpen,
+.blink .eyesOpen {
+  opacity: 0;
+}
+
+.closed .eyesClosed,
+.blink .eyesClosed {
+  opacity: 1;
+}
+
+.happy .eyesOpen,
+.happy .eyesClosed {
+  opacity: 0;
+}
+
+.happy .eyesHappy {
+  opacity: 1;
+}
+
+/* Blush intensifies while guarding the password or celebrating. */
+.blush {
+  opacity: 0.5;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.closed .blush,
+.happy .blush {
+  opacity: 0.72;
+}
+
+/* Gentle head dip when eyes are shut. */
+.face {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform var(--dur) var(--ease-back);
+}
+
+.closed .face {
+  transform: translateY(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot {
+    animation: none;
+  }
+}

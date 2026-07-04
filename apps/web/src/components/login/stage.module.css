@@ -34,42 +34,6 @@
   }
 }
 
-.orb {
-  position: relative;
-  z-index: 1;
-  width: min(240px, 34vw);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 38% 32%,
-    var(--peri-1),
-    var(--peri-2) 62%,
-    var(--peri-deep)
-  );
-  box-shadow:
-    0 34px 60px -22px var(--shadow-mascot),
-    inset 0 -14px 32px rgba(0, 0, 0, 0.12),
-    inset 8px 12px 26px rgba(255, 255, 255, 0.35);
-  animation: floaty 6s var(--ease) infinite;
-}
-
-@keyframes floaty {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -12px;
-  }
-}
-
-.orbFace {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
 .story {
   position: relative;
   z-index: 1;
@@ -159,8 +123,5 @@
   .stage {
     padding: var(--sp-16) var(--sp-6) var(--sp-4);
     gap: var(--sp-6);
-  }
-  .orb {
-    width: min(180px, 46vw);
   }
 }
