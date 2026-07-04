@@ -10,11 +10,13 @@ import {
   Baseline,
   Bold,
   Highlighter,
+  Image as ImageIcon,
   ImagePlus,
   Italic,
   List,
   ListOrdered,
   Minus,
+  Move,
   PaintBucket,
   RectangleHorizontal,
   RectangleVertical,
@@ -25,6 +27,12 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -37,14 +45,14 @@ import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { Orientation } from './document-editor';
+import type { ImageMode, Orientation } from './document-editor';
 import { FontPicker } from './font-picker';
 
 type Props = {
   editor: Editor | null;
   orientation: Orientation;
   onOrientationChange: (value: Orientation) => void;
-  onInsertImage: (src: string) => void;
+  onInsertImage: (src: string, mode: ImageMode) => void;
   onPageBgChange: (value: string) => void;
 };
 
@@ -164,7 +172,7 @@ export function EditorToolbar({
 
   const chain = () => editor.chain().focus();
 
-  function pickFile() {
+  function pickFile(mode: ImageMode) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -172,7 +180,7 @@ export function EditorToolbar({
       const file = input.files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => onInsertImage(reader.result as string);
+      reader.onload = () => onInsertImage(reader.result as string, mode);
       reader.readAsDataURL(file);
     };
     input.click();
@@ -356,17 +364,25 @@ export function EditorToolbar({
           <Minus />
         </Button>
       </Hint>
-      <Hint label="Inserir imagem">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8"
-          aria-label="Inserir imagem"
-          onClick={pickFile}
-        >
-          <ImagePlus />
-        </Button>
-      </Hint>
+      <DropdownMenu>
+        <Hint label="Inserir imagem">
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-8" aria-label="Inserir imagem">
+              <ImagePlus />
+            </Button>
+          </DropdownMenuTrigger>
+        </Hint>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => pickFile('inline')}>
+            <ImageIcon />
+            Imagem em linha
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => pickFile('floating')}>
+            <Move />
+            Imagem flutuante
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
