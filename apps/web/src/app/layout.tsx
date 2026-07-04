@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono, Poppins } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { ThemeProvider } from '../components/theme-provider';
+import '../styles/tailwind.css';
 import '../styles/tokens.css';
 import './global.css';
 
