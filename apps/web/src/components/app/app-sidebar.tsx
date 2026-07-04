@@ -20,6 +20,7 @@ import { useCommandMenu } from '../../lib/command-menu-store';
 import { mockUser, screens } from '../../lib/mock-data';
 import { useUserPanel } from '../../lib/user-panel-store';
 import { DocIcon } from '../icons';
+import { ThemeSwitcher } from './theme-switcher';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -81,6 +82,10 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <ThemeSwitcher />
+          </SidebarMenuItem>
+
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" onClick={() => openUser(true)} tooltip={mockUser.name}>
               <Avatar className="size-8 rounded-lg">
