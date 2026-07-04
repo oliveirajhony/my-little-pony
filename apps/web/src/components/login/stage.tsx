@@ -1,4 +1,4 @@
-import { ArrowRightIcon, FileIcon, PencilIcon, ShareIcon } from '../icons';
+import { ArrowRightIcon, PublishIcon, ShareIcon, WriteIcon } from '../icons';
 import styles from './stage.module.css';
 
 export function Stage() {
@@ -36,7 +36,7 @@ export function Stage() {
         <div className={styles.steps}>
           <div className={styles.step}>
             <span className={styles.stepIc}>
-              <PencilIcon />
+              <WriteIcon />
             </span>
             Escreva
           </div>
@@ -45,7 +45,7 @@ export function Stage() {
           </span>
           <div className={styles.step}>
             <span className={styles.stepIc}>
-              <FileIcon />
+              <PublishIcon />
             </span>
             Publique
           </div>

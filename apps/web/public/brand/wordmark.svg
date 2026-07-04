@@ -1,0 +1,25 @@
+<svg width="300" height="60" viewBox="0 0 300 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="my-little-pony">
+
+  <defs>
+    <radialGradient id="wmbody" cx="42%" cy="32%" r="74%">
+      <stop offset="0%" stop-color="#cdd8ff"/>
+      <stop offset="68%" stop-color="#97a8ff"/>
+      <stop offset="100%" stop-color="#5f71d6"/>
+    </radialGradient>
+    <linearGradient id="wmmane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6a8bff"/>
+      <stop offset="50%" stop-color="#4ac8ff"/>
+      <stop offset="100%" stop-color="#9d6bff"/>
+    </linearGradient>
+    <linearGradient id="wmbrand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f6bff"/>
+      <stop offset="100%" stop-color="#0b3db0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="14" width="34" height="34" rx="11" fill="url(#wmbrand)"/>
+  <g stroke="#fff" stroke-width="2.2" fill="none">
+    <path d="M8 22h11l5 5v11H8z" transform="translate(0.5,0)"/>
+    <path d="M19 22v5h5"/>
+  </g>
+  <text x="46" y="40" font-family="Poppins, system-ui, sans-serif" font-weight="600" font-size="26" letter-spacing="-0.5" fill="#1a2a52">my-little-pony</text>
+</svg>

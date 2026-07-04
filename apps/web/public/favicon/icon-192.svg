@@ -1,0 +1,37 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <radialGradient id="f192body" cx="42%" cy="32%" r="74%">
+      <stop offset="0%" stop-color="#cdd8ff"/>
+      <stop offset="68%" stop-color="#97a8ff"/>
+      <stop offset="100%" stop-color="#5f71d6"/>
+    </radialGradient>
+    <linearGradient id="f192mane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6a8bff"/>
+      <stop offset="50%" stop-color="#4ac8ff"/>
+      <stop offset="100%" stop-color="#9d6bff"/>
+    </linearGradient>
+    <linearGradient id="f192brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f6bff"/>
+      <stop offset="100%" stop-color="#0b3db0"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42.2" fill="url(#f192brand)"/>
+  <g transform="translate(96.0,96.0) scale(0.78) translate(-96.0,-96.0)">
+  <path d="M96.0 49.9 L83.7 8.8 L96.0 -13.2 L108.3 8.8 Z" fill="#eaf1ff" stroke="#aebbe8" stroke-width="2.7"/>
+  <path d="M38.4 52.7 L24.7 11.5 L65.8 36.2 Z" fill="#97a8ff"/>
+  <path d="M153.6 52.7 L167.3 11.5 L126.2 36.2 Z" fill="#97a8ff"/>
+  <ellipse cx="96.0" cy="113.0" rx="90.5" ry="85.0" fill="url(#f192body)"/>
+  <ellipse cx="96.0" cy="154.1" rx="52.1" ry="35.7" fill="#ffffff" opacity="0.18"/>
+  <ellipse cx="41.1" cy="143.2" rx="16.5" ry="11.0" fill="#ff9bb0" opacity="0.5"/>
+  <ellipse cx="150.9" cy="143.2" rx="16.5" ry="11.0" fill="#ff9bb0" opacity="0.5"/>
+  <ellipse cx="65.8" cy="110.3" rx="21.9" ry="28.8" fill="#fff"/>
+  <circle cx="65.8" cy="115.7" r="13.0" fill="#1a2a52"/>
+  <circle cx="59.0" cy="106.1" r="4.7" fill="#fff"/>
+  <ellipse cx="126.2" cy="110.3" rx="21.9" ry="28.8" fill="#fff"/>
+  <circle cx="126.2" cy="115.7" r="13.0" fill="#1a2a52"/>
+  <circle cx="119.3" cy="106.1" r="4.7" fill="#fff"/>
+  <path d="M76.8 170.6 Q96.0 187.1 115.2 170.6" stroke="#1a2a52" stroke-width="5.5" fill="none" stroke-linecap="round" opacity="0.62"/>
+  <path d="M49.4 36.2 C49.4 -13.2 98.7 -15.9 109.7 19.7 C117.9 -13.2 161.8 -4.9 153.6 38.9 C137.1 19.7 120.7 33.5 111.1 47.2 C98.7 25.2 71.3 25.2 63.1 47.2 C57.6 36.2 52.1 33.5 49.4 36.2 Z" fill="url(#f192mane)"/>
+  </g>
+</svg>

@@ -1,0 +1,67 @@
+<svg width="260" height="300" viewBox="0 0 260 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="my-little-pony mascote">
+  <defs>
+    <radialGradient id="body" cx="42%" cy="32%" r="74%">
+      <stop offset="0%" stop-color="#cdd8ff"/>
+      <stop offset="68%" stop-color="#97a8ff"/>
+      <stop offset="100%" stop-color="#5f71d6"/>
+    </radialGradient>
+    <linearGradient id="mane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6a8bff"/>
+      <stop offset="50%" stop-color="#4ac8ff"/>
+      <stop offset="100%" stop-color="#9d6bff"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="130" cy="272" rx="70" ry="12" fill="#465ab4" opacity="0.16"/>
+
+  <!-- cauda -->
+  <path d="M60 210 C18 200 12 258 40 288 C24 256 56 232 82 244 C40 260 46 300 78 302 C56 276 88 256 108 258 Z" fill="url(#mane)" opacity="0.94"/>
+
+  <!-- patas -->
+  <g fill="#97a8ff" stroke="#5f71d6" stroke-width="3">
+    <rect x="98" y="232" width="24" height="46" rx="12"/>
+    <rect x="138" y="232" width="24" height="46" rx="12"/>
+  </g>
+  <g fill="#b6c2ff">
+    <rect x="98" y="266" width="24" height="13" rx="6"/>
+    <rect x="138" y="266" width="24" height="13" rx="6"/>
+  </g>
+
+  <!-- corpo -->
+  <ellipse cx="130" cy="200" rx="82" ry="58" fill="url(#body)"/>
+  <ellipse cx="104" cy="180" rx="40" ry="26" fill="#ffffff" opacity="0.22"/>
+
+  <!-- crina de trás -->
+  <path d="M92 96 C64 78 62 42 92 32 C74 24 92 -2 118 12 C106 -2 138 -8 145 18 C147 2 175 4 171 30 C189 24 196 52 179 62 C193 72 184 100 160 98 Z" fill="url(#mane)" opacity="0.92"/>
+
+  <!-- chifre -->
+  <path d="M130 42 L121 10 L130 -6 L139 10 Z" fill="#eaf1ff" stroke="#aebbe8" stroke-width="2"/>
+
+  <!-- orelhas -->
+  <path d="M78 74 L68 44 L100 62 Z" fill="#97a8ff"/>
+  <path d="M182 74 L192 44 L160 62 Z" fill="#97a8ff"/>
+
+  <!-- rosto -->
+  <ellipse cx="130" cy="118" rx="70" ry="66" fill="url(#body)"/>
+  <ellipse cx="130" cy="150" rx="40" ry="28" fill="#ffffff" opacity="0.18"/>
+  <circle cx="116" cy="156" r="3" fill="#8090c0" opacity="0.6"/>
+  <circle cx="144" cy="156" r="3" fill="#8090c0" opacity="0.6"/>
+
+  <!-- blush -->
+  <ellipse cx="88" cy="140" rx="14" ry="9" fill="#ff9bb0" opacity="0.5"/>
+  <ellipse cx="172" cy="140" rx="14" ry="9" fill="#ff9bb0" opacity="0.5"/>
+
+  <!-- olhos -->
+  <ellipse cx="106" cy="116" rx="18" ry="23" fill="#fff"/>
+  <circle cx="106" cy="120" r="10.5" fill="#1a2a52"/>
+  <circle cx="101" cy="113" r="3.6" fill="#fff"/>
+  <ellipse cx="154" cy="116" rx="18" ry="23" fill="#fff"/>
+  <circle cx="154" cy="120" r="10.5" fill="#1a2a52"/>
+  <circle cx="149" cy="113" r="3.6" fill="#fff"/>
+
+  <!-- sorriso -->
+  <path d="M116 164 Q130 176 144 164" stroke="#1a2a52" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.62"/>
+
+  <!-- topete -->
+  <path d="M96 60 C96 24 132 22 140 48 C146 24 178 30 172 62 C160 48 148 58 141 68 C132 52 112 52 106 68 C102 60 98 58 96 60 Z" fill="url(#mane)"/>
+</svg>
