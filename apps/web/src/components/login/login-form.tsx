@@ -1,6 +1,7 @@
 'use client';
 
 import { type FormEvent, useId, useState } from 'react';
+import { useLoginUi } from '../../lib/login-ui-store';
 import { AUTH_MESSAGES, authenticate, DEMO_USER } from '../../lib/mock-auth';
 import { isValidEmail } from '../../lib/validation';
 import { AlertIcon, CheckIcon, DocIcon, EyeIcon, EyeOffIcon, GitHubIcon } from '../icons';
@@ -23,9 +24,20 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
   const passwordId = useId();
   const errorId = useId();
 
+  const setFocusedField = useLoginUi((s) => s.setFocusedField);
+  const setPasswordVisible = useLoginUi((s) => s.setPasswordVisible);
+  const triggerReaction = useLoginUi((s) => s.react);
+
   function fail(message: string) {
     setError(message);
     setShaking(true);
+    triggerReaction('error');
+  }
+
+  function toggleShowPassword() {
+    const next = !showPassword;
+    setShowPassword(next);
+    setPasswordVisible(next);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -46,6 +58,7 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
     const result = await authenticate(email, password, authDelayMs);
     if (result.ok) {
       setStatus('success');
+      triggerReaction('success');
     } else {
       setStatus('idle');
       fail(AUTH_MESSAGES[result.reason]);
@@ -86,6 +99,8 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={() => setFocusedField('email')}
+          onBlur={() => setFocusedField(null)}
           placeholder="voce@exemplo.com"
           autoComplete="email"
           disabled={locked}
@@ -103,6 +118,8 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
             placeholder="••••••••"
             autoComplete="current-password"
             disabled={locked}
@@ -110,7 +127,7 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
           <button
             type="button"
             className={styles.eye}
-            onClick={() => setShowPassword((v) => !v)}
+            onClick={toggleShowPassword}
             aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
             disabled={locked}
           >
