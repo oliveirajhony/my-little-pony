@@ -1,0 +1,14 @@
+{
+  "name": "my-little-pony",
+  "short_name": "mlp",
+  "description": "Editor de textos open source — escreva, publique e compartilhe por link.",
+  "icons": [
+    { "src": "/favicon/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/favicon/favicon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/favicon/icon-512.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "theme_color": "#1f6bff",
+  "background_color": "#f5f7fd",
+  "display": "standalone",
+  "start_url": "/"
+}

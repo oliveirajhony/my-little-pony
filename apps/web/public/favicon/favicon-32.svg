@@ -1,0 +1,37 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <radialGradient id="f32body" cx="42%" cy="32%" r="74%">
+      <stop offset="0%" stop-color="#cdd8ff"/>
+      <stop offset="68%" stop-color="#97a8ff"/>
+      <stop offset="100%" stop-color="#5f71d6"/>
+    </radialGradient>
+    <linearGradient id="f32mane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6a8bff"/>
+      <stop offset="50%" stop-color="#4ac8ff"/>
+      <stop offset="100%" stop-color="#9d6bff"/>
+    </linearGradient>
+    <linearGradient id="f32brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f6bff"/>
+      <stop offset="100%" stop-color="#0b3db0"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7.0" fill="url(#f32brand)"/>
+  <g transform="translate(16.0,16.0) scale(0.78) translate(-16.0,-16.0)">
+  <path d="M16.0 8.3 L13.9 1.5 L16.0 -2.2 L18.1 1.5 Z" fill="#eaf1ff" stroke="#aebbe8" stroke-width="0.5"/>
+  <path d="M6.4 8.8 L4.1 1.9 L11.0 6.0 Z" fill="#97a8ff"/>
+  <path d="M25.6 8.8 L27.9 1.9 L21.0 6.0 Z" fill="#97a8ff"/>
+  <ellipse cx="16.0" cy="18.8" rx="15.1" ry="14.2" fill="url(#f32body)"/>
+  <ellipse cx="16.0" cy="25.7" rx="8.7" ry="5.9" fill="#ffffff" opacity="0.18"/>
+  <ellipse cx="6.9" cy="23.9" rx="2.7" ry="1.8" fill="#ff9bb0" opacity="0.5"/>
+  <ellipse cx="25.1" cy="23.9" rx="2.7" ry="1.8" fill="#ff9bb0" opacity="0.5"/>
+  <ellipse cx="11.0" cy="18.4" rx="3.7" ry="4.8" fill="#fff"/>
+  <circle cx="11.0" cy="19.3" r="2.2" fill="#1a2a52"/>
+  <circle cx="9.8" cy="17.7" r="0.8" fill="#fff"/>
+  <ellipse cx="21.0" cy="18.4" rx="3.7" ry="4.8" fill="#fff"/>
+  <circle cx="21.0" cy="19.3" r="2.2" fill="#1a2a52"/>
+  <circle cx="19.9" cy="17.7" r="0.8" fill="#fff"/>
+  <path d="M12.8 28.4 Q16.0 31.2 19.2 28.4" stroke="#1a2a52" stroke-width="0.9" fill="none" stroke-linecap="round" opacity="0.62"/>
+  <path d="M8.2 6.0 C8.2 -2.2 16.5 -2.7 18.3 3.3 C19.7 -2.2 27.0 -0.8 25.6 6.5 C22.9 3.3 20.1 5.6 18.5 7.9 C16.5 4.2 11.9 4.2 10.5 7.9 C9.6 6.0 8.7 5.6 8.2 6.0 Z" fill="url(#f32mane)"/>
+  </g>
+</svg>

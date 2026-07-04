@@ -1,0 +1,43 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ogbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5f7fd"/>
+      <stop offset="100%" stop-color="#e7ecf7"/>
+    </linearGradient>
+    <radialGradient id="ogglow" cx="30%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#c3ceff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#c3ceff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ogbody" cx="42%" cy="32%" r="74%">
+      <stop offset="0%" stop-color="#cdd8ff"/><stop offset="68%" stop-color="#97a8ff"/><stop offset="100%" stop-color="#5f71d6"/>
+    </radialGradient>
+    <linearGradient id="ogmane" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6a8bff"/><stop offset="50%" stop-color="#4ac8ff"/><stop offset="100%" stop-color="#9d6bff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ogbg)"/>
+  <rect width="1200" height="630" fill="url(#ogglow)"/>
+  <g transform="translate(760,150)"><path d="M150.0 78.0 L130.7 13.7 L150.0 -20.6 L169.3 13.7 Z" fill="#eaf1ff" stroke="#aebbe8" stroke-width="4.3"/>
+  <path d="M60.0 82.3 L38.6 18.0 L102.9 56.6 Z" fill="#97a8ff"/>
+  <path d="M240.0 82.3 L261.4 18.0 L197.1 56.6 Z" fill="#97a8ff"/>
+  <ellipse cx="150.0" cy="176.6" rx="141.4" ry="132.9" fill="url(#ogbody)"/>
+  <ellipse cx="150.0" cy="240.9" rx="81.4" ry="55.7" fill="#ffffff" opacity="0.18"/>
+  <ellipse cx="64.3" cy="223.7" rx="25.7" ry="17.1" fill="#ff9bb0" opacity="0.5"/>
+  <ellipse cx="235.7" cy="223.7" rx="25.7" ry="17.1" fill="#ff9bb0" opacity="0.5"/>
+  <ellipse cx="102.9" cy="172.3" rx="34.3" ry="45.0" fill="#fff"/>
+  <circle cx="102.9" cy="180.9" r="20.4" fill="#1a2a52"/>
+  <circle cx="92.1" cy="165.9" r="7.3" fill="#fff"/>
+  <ellipse cx="197.1" cy="172.3" rx="34.3" ry="45.0" fill="#fff"/>
+  <circle cx="197.1" cy="180.9" r="20.4" fill="#1a2a52"/>
+  <circle cx="186.4" cy="165.9" r="7.3" fill="#fff"/>
+  <path d="M120.0 266.6 Q150.0 292.3 180.0 266.6" stroke="#1a2a52" stroke-width="8.6" fill="none" stroke-linecap="round" opacity="0.62"/>
+  <path d="M77.1 56.6 C77.1 -20.6 154.3 -24.9 171.4 30.9 C184.3 -20.6 252.9 -7.7 240.0 60.9 C214.3 30.9 188.6 52.3 173.6 73.7 C154.3 39.4 111.4 39.4 98.6 73.7 C90.0 56.6 81.4 52.3 77.1 56.6 Z" fill="url(#ogmane)"/></g>
+  <text x="90" y="270" font-family="Poppins, system-ui, sans-serif" font-weight="600" font-size="72" letter-spacing="-2" fill="#1a2a52">my-little-pony</text>
+  <text x="92" y="340" font-family="Inter, system-ui, sans-serif" font-weight="500" font-size="34" fill="#5f71d6">Escreva. Publique. Compartilhe por link.</text>
+  <g transform="translate(92,400)" font-family="Inter, system-ui, sans-serif" font-size="24" fill="#5a6478" font-weight="500">
+    <rect x="0" y="0" width="200" height="44" rx="22" fill="#eaf1ff" stroke="#c3ceff"/>
+    <text x="24" y="29">Open source</text>
+    <rect x="216" y="0" width="150" height="44" rx="22" fill="#eaf1ff" stroke="#c3ceff"/>
+    <text x="240" y="29">Editor</text>
+  </g>
+</svg>
