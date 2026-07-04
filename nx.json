@@ -32,6 +32,7 @@
       }
     }
   ],
+  "defaultBase": "main",
   "analytics": false,
   "generators": {
     "@nx/next": {
