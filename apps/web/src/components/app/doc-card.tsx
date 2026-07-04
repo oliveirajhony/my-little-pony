@@ -1,6 +1,7 @@
 'use client';
 
 import { EllipsisVertical, ExternalLink, Globe, Pencil, PenLine, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -45,9 +46,11 @@ export function DocCard({ doc }: { doc: Doc }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>
-              <Pencil />
-              Editar
+            <DropdownMenuItem asChild>
+              <Link href="/app/editor">
+                <Pencil />
+                Editar
+              </Link>
             </DropdownMenuItem>
             {published && (
               <DropdownMenuItem>

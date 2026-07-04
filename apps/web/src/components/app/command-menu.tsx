@@ -52,7 +52,7 @@ export function CommandMenu() {
 
         <CommandGroup heading="Ações rápidas">
           <CommandItem
-            onSelect={() => run(() => router.push('/app/novo'))}
+            onSelect={() => run(() => router.push('/app/editor'))}
             keywords={['criar', 'nova', 'nota', 'documento']}
           >
             <SquarePlus />

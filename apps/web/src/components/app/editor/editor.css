@@ -1,0 +1,99 @@
+/* TipTap document content — the sheet is always a light page, like Google Docs. */
+.tiptap {
+  outline: none;
+  font-family: var(--font-body);
+  color: #1d1d1f;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.tiptap > :first-child {
+  margin-top: 0;
+}
+
+.tiptap p {
+  margin: 0 0 0.65em;
+}
+
+.tiptap h1 {
+  font-family: var(--font-display);
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0.7em 0 0.3em;
+}
+
+.tiptap h2 {
+  font-family: var(--font-display);
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0.7em 0 0.3em;
+}
+
+.tiptap h3 {
+  font-family: var(--font-display);
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0.7em 0 0.3em;
+}
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5em;
+  margin: 0 0 0.65em;
+}
+
+.tiptap ul {
+  list-style: disc;
+}
+
+.tiptap ol {
+  list-style: decimal;
+}
+
+.tiptap li {
+  margin: 0.2em 0;
+}
+
+.tiptap li p {
+  margin: 0;
+}
+
+.tiptap hr {
+  border: none;
+  border-top: 1px solid #d0d5dd;
+  margin: 1.1em 0;
+}
+
+.tiptap blockquote {
+  border-left: 3px solid #d0d5dd;
+  padding-left: 1em;
+  color: #667085;
+  margin: 0 0 0.65em;
+}
+
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.tiptap img.ProseMirror-selectednode {
+  outline: 2px solid #1f6bff;
+  outline-offset: 2px;
+}
+
+.tiptap a {
+  color: #1f6bff;
+  text-decoration: underline;
+}
+
+.tiptap code {
+  background: #f2f4f7;
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
