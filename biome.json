@@ -15,7 +15,9 @@
       "!**/next-env.d.ts",
       "!**/*.min.js",
       "!docs/mockups",
-      "!**/public"
+      "!**/public",
+      "!**/components/ui",
+      "!**/styles/tailwind.css"
     ]
   },
   "formatter": {
