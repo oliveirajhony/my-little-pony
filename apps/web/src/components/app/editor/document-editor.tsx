@@ -6,7 +6,7 @@ import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-s
 import { Underline } from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
 import { ResizableImage } from './resizable-image';
@@ -83,6 +83,22 @@ export function DocumentEditor() {
     setSelectedId(null);
   }
 
+  // Measure the content to draw page-break markers at each A4 boundary.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setContentHeight(el.offsetHeight));
+    observer.observe(el);
+    setContentHeight(el.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
+
+  const pageCount = Math.max(1, Math.ceil((contentHeight || minHeight) / minHeight));
+  const sheetHeight = pageCount * minHeight;
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <EditorToolbar
@@ -96,21 +112,34 @@ export function DocumentEditor() {
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-muted/40 p-6 md:p-10">
         <div
           className="relative mx-auto shadow-lg ring-1 ring-black/5"
-          style={{ width, minHeight, background: pageBg }}
+          style={{ width, height: sheetHeight, background: pageBg }}
           onPointerDown={(event) => {
             if (event.target === event.currentTarget) setSelectedId(null);
           }}
         >
-          <div className="px-16 py-[72px]">
+          <div ref={contentRef} className="px-16 py-[72px]">
             <EditorContent editor={editor} />
           </div>
+
+          {Array.from({ length: pageCount - 1 }, (_, index) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed positional page markers
+              key={index}
+              className="pointer-events-none absolute inset-x-0 flex items-center gap-3 px-6"
+              style={{ top: (index + 1) * minHeight }}
+            >
+              <div className="h-px flex-1 bg-black/10" />
+              <span className="text-[11px] font-medium text-black/40">Página {index + 2}</span>
+              <div className="h-px flex-1 bg-black/10" />
+            </div>
+          ))}
 
           {images.map((image) => (
             <FloatingImage
               key={image.id}
               data={image}
               selected={selectedId === image.id}
-              bounds={{ w: width, h: minHeight }}
+              bounds={{ w: width, h: sheetHeight }}
               onSelect={() => setSelectedId(image.id)}
               onChange={(patch) => updateImage(image.id, patch)}
               onRemove={() => removeImage(image.id)}
