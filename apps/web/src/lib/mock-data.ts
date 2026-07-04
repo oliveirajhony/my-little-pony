@@ -10,7 +10,7 @@ export const mockUser = {
 export type Screen = { title: string; href: string; icon: LucideIcon };
 
 export const screens: Screen[] = [
-  { title: 'Publicados', href: '/app', icon: Globe },
+  { title: 'Documentos', href: '/app', icon: Globe },
   { title: 'Rascunhos', href: '/app/rascunhos', icon: PenLine },
   { title: 'Todos os documentos', href: '/app/documentos', icon: FileText },
   { title: 'Explorar', href: '/app/explorar', icon: Compass },
