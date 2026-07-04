@@ -1,0 +1,22 @@
+{
+  "name": "@my-little-pony/web",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "next": "~16.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "nx": {
+    "targets": {
+      "typecheck": {
+        "command": "tsc --noEmit -p apps/web/tsconfig.json",
+        "cache": true,
+        "inputs": [
+          "default",
+          "^default"
+        ]
+      }
+    }
+  }
+}
