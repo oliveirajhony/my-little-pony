@@ -1,4 +1,5 @@
 import { SquarePlus } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { DocCard } from '../../components/app/doc-card';
 import { documents } from '../../lib/mock-data';
@@ -13,9 +14,11 @@ export default function DocumentsPage() {
             Publicados e rascunhos — acessíveis por link.
           </p>
         </div>
-        <Button>
-          <SquarePlus />
-          Nova nota
+        <Button asChild>
+          <Link href="/app/editor">
+            <SquarePlus />
+            Nova nota
+          </Link>
         </Button>
       </div>
 
