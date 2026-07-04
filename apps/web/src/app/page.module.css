@@ -1,0 +1,90 @@
+.home {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-8);
+}
+
+.card {
+  text-align: center;
+  max-width: 34rem;
+  display: grid;
+  gap: var(--sp-6);
+  justify-items: center;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: linear-gradient(150deg, var(--blue), var(--blue-deep));
+  box-shadow: 0 10px 22px -8px var(--blue);
+  display: grid;
+  place-items: center;
+}
+
+.mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.title b {
+  background: linear-gradient(120deg, var(--mane-3), var(--mane-1), var(--mane-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.sub {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.link {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--blue);
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--field-border);
+  background: var(--field-bg);
+  transition: border-color var(--dur) var(--ease);
+}
+
+.link:hover {
+  border-color: var(--blue);
+}

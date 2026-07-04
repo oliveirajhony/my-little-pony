@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/.next", "!**/dist", "!**/.nx", "!**/next-env.d.ts", "!**/*.min.js"]
+    "includes": [
+      "**",
+      "!**/.next",
+      "!**/dist",
+      "!**/.nx",
+      "!**/next-env.d.ts",
+      "!**/*.min.js",
+      "!docs/mockups"
+    ]
   },
   "formatter": {
     "enabled": true,
