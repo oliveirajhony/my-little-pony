@@ -1,0 +1,406 @@
+.card {
+  width: min(460px, 100%);
+  padding: var(--sp-12) var(--sp-10) var(--sp-8);
+  border-radius: var(--r-xl);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.card.shake {
+  animation: shake 0.55s var(--ease);
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    translate: -1px 0;
+  }
+  20%,
+  80% {
+    translate: 4px 0;
+  }
+  30%,
+  50%,
+  70% {
+    translate: -9px 0;
+  }
+  40%,
+  60% {
+    translate: 9px 0;
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-8);
+}
+
+.mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: linear-gradient(150deg, var(--blue), var(--blue-deep));
+  box-shadow: 0 8px 18px -6px var(--blue);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.mark svg {
+  width: 19px;
+  height: 19px;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.tag {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  padding: 4px 9px;
+  border-radius: var(--r-pill);
+}
+
+.head {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.sub {
+  margin: var(--sp-3) 0 var(--sp-10);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.field {
+  margin-bottom: var(--sp-5);
+}
+
+.label {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: var(--sp-2);
+}
+
+.pwWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink);
+  padding: 15px 16px;
+  border-radius: var(--r-md);
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  outline: none;
+  transition:
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+
+.input::placeholder {
+  color: color-mix(in srgb, var(--ink-2) 70%, transparent);
+}
+
+.input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 18%, transparent);
+  background: color-mix(in srgb, var(--field-bg) 60%, var(--blue-050));
+}
+
+.input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.inputPw {
+  padding-right: 50px;
+}
+
+.eye {
+  position: absolute;
+  right: 9px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  transition:
+    color var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+
+.eye:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.eye:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+.eye svg {
+  width: 20px;
+  height: 20px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: var(--sp-3) 0 var(--sp-8);
+  gap: var(--sp-4);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  user-select: none;
+}
+
+.check input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.checkBox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--field-border);
+  background: var(--field-bg);
+  display: grid;
+  place-items: center;
+  transition: all var(--dur) var(--ease);
+}
+
+.checkBox svg {
+  width: 12px;
+  height: 12px;
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all var(--dur) var(--ease-back);
+}
+
+.check input:checked + .checkBox {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.check input:checked + .checkBox svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.check input:focus-visible + .checkBox {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent);
+}
+
+.link {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--blue);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--blue-strong);
+  text-decoration: underline;
+}
+
+.btn {
+  width: 100%;
+  position: relative;
+  min-height: 54px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--blue), var(--blue-deep));
+  box-shadow:
+    0 14px 28px -10px var(--blue),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition:
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    filter var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow:
+    0 18px 34px -10px var(--blue),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.995);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 32%, transparent);
+}
+
+.btn:disabled {
+  cursor: default;
+}
+
+.btnDone {
+  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 60%, #000));
+  box-shadow: 0 14px 28px -10px var(--success);
+}
+
+.btnDoneLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnDoneLabel svg {
+  width: 18px;
+  height: 18px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  min-height: 20px;
+  margin: var(--sp-4) 0 0;
+  font-size: 14px;
+  color: var(--error);
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.error svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.errorShow {
+  opacity: 1;
+}
+
+.demo {
+  margin-top: var(--sp-6);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--field-border);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.demo code {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-top: var(--sp-8);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--hairline);
+}
+
+.foot span {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.repo:hover {
+  color: var(--ink);
+}
+
+.repo svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 940px) {
+  .card {
+    padding: var(--sp-10) var(--sp-6) var(--sp-6);
+  }
+  .head {
+    font-size: 28px;
+  }
+}
