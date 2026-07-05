@@ -31,9 +31,9 @@ export class CreateDocuments1751760000000 implements MigrationInterface {
     await queryRunner.query(
       'CREATE INDEX "documents_categories_idx" ON "documents" USING GIN ("categories")',
     );
-    // Only published documents share the public slug namespace.
+    // Published slugs are unique per author (public URL is /d/:ownerId/:slug).
     await queryRunner.query(
-      `CREATE UNIQUE INDEX "documents_published_slug_idx" ON "documents" ("slug") WHERE "status" = 'published'`,
+      `CREATE UNIQUE INDEX "documents_published_slug_idx" ON "documents" ("owner_id", "slug") WHERE "status" = 'published'`,
     );
   }
 

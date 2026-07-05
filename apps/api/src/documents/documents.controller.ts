@@ -59,8 +59,8 @@ export class DocumentsController {
     @Inject(CACHE_STORE) private readonly cache: CacheStore,
   ) {}
 
-  private invalidatePublic(slug: string): Promise<void> {
-    return this.cache.delete(publicDocumentKey(slug));
+  private invalidatePublic(ownerId: string, slug: string): Promise<void> {
+    return this.cache.delete(publicDocumentKey(ownerId, slug));
   }
 
   @Get()
@@ -117,7 +117,7 @@ export class DocumentsController {
       }),
     );
     // Keep the public page fresh when a published document is edited.
-    if (detail.status === 'published') await this.invalidatePublic(detail.slug);
+    if (detail.status === 'published') await this.invalidatePublic(user.id, detail.slug);
     return detail;
   }
 
@@ -127,7 +127,7 @@ export class DocumentsController {
   @ApiOkResponse({ type: DocumentSummaryResponse })
   async publish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const summary = toDocumentSummary(await this.publishDocument.execute({ id, ownerId: user.id }));
-    await this.invalidatePublic(summary.slug);
+    await this.invalidatePublic(user.id, summary.slug);
     return summary;
   }
 
@@ -139,7 +139,7 @@ export class DocumentsController {
     const summary = toDocumentSummary(
       await this.unpublishDocument.execute({ id, ownerId: user.id }),
     );
-    await this.invalidatePublic(summary.slug);
+    await this.invalidatePublic(user.id, summary.slug);
     return summary;
   }
 

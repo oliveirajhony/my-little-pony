@@ -20,9 +20,9 @@ export type PublicDocument = {
   updatedAt: string;
 };
 
-/** Cache key for a published document served by its public slug. */
-export function publicDocumentKey(slug: string): string {
-  return `public:doc:${slug}`;
+/** Cache key for a published document, scoped by owner + slug. */
+export function publicDocumentKey(ownerId: string, slug: string): string {
+  return `public:doc:${ownerId}:${slug}`;
 }
 
 function toPublic(doc: Document): PublicDocument {
@@ -147,11 +147,11 @@ export class PublishDocument {
     const base = doc.slug;
     let candidate = base;
     let suffix = 1;
-    let existing = await this.repo.findPublishedBySlug(candidate);
+    let existing = await this.repo.findPublishedBySlug(doc.ownerId, candidate);
     while (existing && existing.id !== doc.id) {
       suffix += 1;
       candidate = `${base}-${suffix}`;
-      existing = await this.repo.findPublishedBySlug(candidate);
+      existing = await this.repo.findPublishedBySlug(doc.ownerId, candidate);
     }
     if (candidate !== base) doc.setSlug(candidate, this.clock.now());
   }
@@ -182,12 +182,12 @@ export class GetPublicDocument {
     private readonly ttlSeconds: number,
   ) {}
 
-  async execute(slug: string): Promise<PublicDocument> {
-    const key = publicDocumentKey(slug);
+  async execute(ownerId: string, slug: string): Promise<PublicDocument> {
+    const key = publicDocumentKey(ownerId, slug);
     const cached = await this.cache.get<PublicDocument>(key);
     if (cached) return cached;
 
-    const doc = await this.repo.findPublishedBySlug(slug);
+    const doc = await this.repo.findPublishedBySlug(ownerId, slug);
     if (!doc) throw new DomainError('document-not-found');
 
     const view = toPublic(doc);

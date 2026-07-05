@@ -32,10 +32,13 @@ export class PublicDocumentResponse {
 export class PublicController {
   constructor(private readonly getPublicDocument: GetPublicDocument) {}
 
-  @Get(':slug')
-  @ApiOperation({ summary: 'Documento publicado, por slug (anônimo, com cache)' })
+  @Get(':ownerId/:slug')
+  @ApiOperation({ summary: 'Documento publicado, por autor + slug (anônimo, com cache)' })
   @ApiOkResponse({ type: PublicDocumentResponse })
-  content(@Param('slug') slug: string): Promise<PublicDocumentResponse> {
-    return this.getPublicDocument.execute(slug);
+  content(
+    @Param('ownerId') ownerId: string,
+    @Param('slug') slug: string,
+  ): Promise<PublicDocumentResponse> {
+    return this.getPublicDocument.execute(ownerId, slug);
   }
 }

@@ -30,8 +30,8 @@ export interface DocumentRepository {
   delete(id: string): Promise<void>;
   /** Owner-scoped list with full-text query, filters and pagination. */
   list(query: DocumentQuery): Promise<DocumentPage>;
-  /** A published document by its public slug, or null. */
-  findPublishedBySlug(slug: string): Promise<Document | null>;
+  /** A published document by owner + public slug, or null. */
+  findPublishedBySlug(ownerId: string, slug: string): Promise<Document | null>;
 }
 
 /** Emitted when a published document needs (re)indexing by the Python service. */

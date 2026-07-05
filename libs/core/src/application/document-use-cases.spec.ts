@@ -63,9 +63,9 @@ class FakeDocs implements DocumentRepository {
   async list(_query: DocumentQuery): Promise<DocumentPage> {
     return { items: [...this.byId.values()], total: this.byId.size };
   }
-  async findPublishedBySlug(slug: string) {
+  async findPublishedBySlug(ownerId: string, slug: string) {
     for (const d of this.byId.values()) {
-      if (d.status === 'published' && d.slug === slug) return d;
+      if (d.status === 'published' && d.isOwnedBy(ownerId) && d.slug === slug) return d;
     }
     return null;
   }
@@ -124,7 +124,23 @@ describe('document use cases', () => {
     expect(await repo.findById(doc.id)).toBeNull();
   });
 
-  it('publishes and appends a suffix on slug collision', async () => {
+  it('appends a suffix when the same author reuses a published slug', async () => {
+    const repo = new FakeDocs();
+    const a = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1', title: 'Guia' });
+    const b = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1', title: 'Guia' });
+    const publishedA = await new PublishDocument(repo, clock, makeEvents().events).execute({
+      id: a.id,
+      ownerId: 'u1',
+    });
+    const publishedB = await new PublishDocument(repo, clock, makeEvents().events).execute({
+      id: b.id,
+      ownerId: 'u1',
+    });
+    expect(publishedA.slug).toBe('guia');
+    expect(publishedB.slug).toBe('guia-2');
+  });
+
+  it('lets different authors keep the same slug (per-user namespace)', async () => {
     const repo = new FakeDocs();
     const a = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1', title: 'Guia' });
     const b = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u2', title: 'Guia' });
@@ -137,7 +153,7 @@ describe('document use cases', () => {
       ownerId: 'u2',
     });
     expect(publishedA.slug).toBe('guia');
-    expect(publishedB.slug).toBe('guia-2');
+    expect(publishedB.slug).toBe('guia');
   });
 
   it('unpublishes back to draft', async () => {
@@ -182,10 +198,10 @@ describe('document use cases', () => {
       id: doc.id,
       ownerId: 'u1',
     });
-    const first = await new GetPublicDocument(repo, cache, 60).execute('publico');
+    const first = await new GetPublicDocument(repo, cache, 60).execute('u1', 'publico');
     expect(first.title).toBe('Publico');
     // second call hits the cache
-    await new GetPublicDocument(repo, cache, 60).execute('publico');
+    await new GetPublicDocument(repo, cache, 60).execute('u1', 'publico');
     expect(cache.hits).toBe(1);
   });
 
@@ -193,7 +209,7 @@ describe('document use cases', () => {
     const repo = new FakeDocs();
     const cache = new FakeCache();
     await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1', title: 'Rascunho' });
-    await expect(new GetPublicDocument(repo, cache, 60).execute('rascunho')).rejects.toThrow(
+    await expect(new GetPublicDocument(repo, cache, 60).execute('u1', 'rascunho')).rejects.toThrow(
       /document-not-found/,
     );
   });

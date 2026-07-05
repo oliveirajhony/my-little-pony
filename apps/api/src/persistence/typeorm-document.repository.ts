@@ -26,8 +26,8 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
     await this.repo.delete({ id });
   }
 
-  async findPublishedBySlug(slug: string): Promise<Document | null> {
-    const row = await this.repo.findOne({ where: { slug, status: 'published' } });
+  async findPublishedBySlug(ownerId: string, slug: string): Promise<Document | null> {
+    const row = await this.repo.findOne({ where: { ownerId, slug, status: 'published' } });
     return row ? this.toDomain(row) : null;
   }
 
