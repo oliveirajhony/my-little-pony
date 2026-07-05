@@ -12,7 +12,7 @@ import type {
 export type AuthTokens = { accessToken: string; refreshToken: string };
 export type AuthResult = AuthTokens & { user: User };
 
-const MIN_PASSWORD_LENGTH = 8;
+export const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * Issues and rotates sessions: a short-lived access token plus an opaque

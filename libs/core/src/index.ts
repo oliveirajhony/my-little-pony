@@ -5,6 +5,7 @@ export {
   type AuthResult,
   type AuthTokens,
   Logout,
+  MIN_PASSWORD_LENGTH,
   RefreshSession,
   RegisterUser,
   SessionIssuer,
@@ -17,5 +18,10 @@ export type {
   TokenService,
   UserRepository,
 } from './application/ports.js';
+export {
+  ChangePassword,
+  GetProfile,
+  UpdateProfile,
+} from './application/profile-use-cases.js';
 export { DomainError, type DomainErrorCode } from './domain/errors.js';
 export { User, type UserProps } from './domain/user.js';
