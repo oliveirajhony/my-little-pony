@@ -7,7 +7,11 @@ export type DomainErrorCode =
   | 'email-taken'
   | 'bad-credentials'
   | 'stale-token'
-  | 'user-not-found';
+  | 'user-not-found'
+  | 'document-not-found'
+  | 'forbidden'
+  | 'stale-version'
+  | 'slug-taken';
 
 export class DomainError extends Error {
   constructor(readonly code: DomainErrorCode) {

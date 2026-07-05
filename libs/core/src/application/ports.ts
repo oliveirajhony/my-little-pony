@@ -1,3 +1,4 @@
+import type { Document, DocumentStatus } from '../domain/document.js';
 import type { User } from '../domain/user.js';
 
 /** Hashes and verifies plaintext passwords (Argon2id adapter in apps/api). */
@@ -10,6 +11,27 @@ export interface UserRepository {
   findByEmail(email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   save(user: User): Promise<void>;
+}
+
+export type DocumentQuery = {
+  ownerId: string;
+  q?: string;
+  status?: DocumentStatus;
+  category?: string;
+  page: number;
+  limit: number;
+};
+
+export type DocumentPage = { items: Document[]; total: number };
+
+export interface DocumentRepository {
+  save(document: Document): Promise<void>;
+  findById(id: string): Promise<Document | null>;
+  delete(id: string): Promise<void>;
+  /** Owner-scoped list with full-text query, filters and pagination. */
+  list(query: DocumentQuery): Promise<DocumentPage>;
+  /** A published document by its public slug, or null. */
+  findPublishedBySlug(slug: string): Promise<Document | null>;
 }
 
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */

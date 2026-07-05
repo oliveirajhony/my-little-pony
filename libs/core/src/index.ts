@@ -12,6 +12,9 @@ export {
 } from './application/auth-use-cases.js';
 export type {
   Clock,
+  DocumentPage,
+  DocumentQuery,
+  DocumentRepository,
   IdGenerator,
   PasswordHasher,
   RefreshTokenStore,
@@ -23,5 +26,11 @@ export {
   GetProfile,
   UpdateProfile,
 } from './application/profile-use-cases.js';
+export {
+  Document,
+  type DocumentProps,
+  type DocumentStatus,
+  type IndexStatus,
+} from './domain/document.js';
 export { DomainError, type DomainErrorCode } from './domain/errors.js';
 export { User, type UserProps } from './domain/user.js';
