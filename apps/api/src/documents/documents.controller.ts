@@ -2,6 +2,7 @@ import {
   type CacheStore,
   CreateDocument,
   DeleteDocument,
+  type DocumentPdfStorage,
   GetDocument,
   ListDocuments,
   PublishDocument,
@@ -33,7 +34,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AccessTokenGuard, type AuthUser, CurrentUser } from '../auth/access-token.guard';
-import { CACHE_STORE } from '../tokens';
+import { CACHE_STORE, DOCUMENT_PDF_STORAGE } from '../tokens';
 import {
   DocumentDetailResponse,
   DocumentListResponse,
@@ -63,6 +64,7 @@ export class DocumentsController {
     private readonly publishDocument: PublishDocument,
     private readonly unpublishDocument: UnpublishDocument,
     @Inject(CACHE_STORE) private readonly cache: CacheStore,
+    @Inject(DOCUMENT_PDF_STORAGE) private readonly pdfStorage: DocumentPdfStorage,
   ) {}
 
   private invalidatePublic(ownerId: string, slug: string): Promise<void> {
@@ -150,6 +152,8 @@ export class DocumentsController {
       await this.unpublishDocument.execute({ id, ownerId: user.id }),
     );
     await this.invalidatePublic(user.id, summary.slug);
+    // O documento não está mais público — descarta o PDF gerado.
+    await this.pdfStorage.remove({ ownerId: user.id, documentId: id });
     return summary;
   }
 
@@ -159,5 +163,6 @@ export class DocumentsController {
   @ApiNoContentResponse()
   async remove(@CurrentUser() user: AuthUser, @Param('id', IdParam) id: string) {
     await this.deleteDocument.execute({ id, ownerId: user.id });
+    await this.pdfStorage.remove({ ownerId: user.id, documentId: id });
   }
 }

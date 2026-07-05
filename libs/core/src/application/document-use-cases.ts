@@ -4,10 +4,12 @@ import type {
   CacheStore,
   Clock,
   DocumentPage,
+  DocumentPdfStorage,
   DocumentQuery,
   DocumentRepository,
   EventPublisher,
   IdGenerator,
+  PdfRenderer,
 } from './ports.js';
 
 export type PublicDocument = {
@@ -139,6 +141,8 @@ export class PublishDocument {
       ownerId: doc.ownerId,
       version: doc.version,
     });
+    // Ask the PDF pipeline to (re)generate the downloadable file.
+    await this.events.documentPdfRequested({ documentId: doc.id, ownerId: doc.ownerId });
     return doc;
   }
 
@@ -211,5 +215,46 @@ export class MarkDocumentIndexed {
     if (!doc) return;
     doc.setIndexStatus(input.status, this.clock.now());
     await this.repo.save(doc);
+  }
+}
+
+/**
+ * Renders a published document to PDF and stores it (queue-driven). System-level:
+ * no owner check. Drafts and documents removed meanwhile are skipped.
+ */
+export class GenerateDocumentPdf {
+  constructor(
+    private readonly repo: DocumentRepository,
+    private readonly renderer: PdfRenderer,
+    private readonly storage: DocumentPdfStorage,
+  ) {}
+
+  async execute(input: { documentId: string }): Promise<void> {
+    const doc = await this.repo.findById(input.documentId);
+    if (doc?.status !== 'published') return;
+    const data = await this.renderer.render({ title: doc.title, contentHtml: doc.content });
+    await this.storage.put({ ownerId: doc.ownerId, documentId: doc.id, data });
+  }
+}
+
+/**
+ * Public read of a published document's PDF by owner + slug. Returns null when
+ * the document isn't published or the PDF hasn't been generated yet.
+ */
+export class GetDocumentPdf {
+  constructor(
+    private readonly repo: DocumentRepository,
+    private readonly storage: DocumentPdfStorage,
+  ) {}
+
+  async execute(
+    ownerId: string,
+    slug: string,
+  ): Promise<{ title: string; data: Uint8Array } | null> {
+    const doc = await this.repo.findPublishedBySlug(ownerId, slug);
+    if (!doc) return null;
+    const data = await this.storage.get({ ownerId, documentId: doc.id });
+    if (!data) return null;
+    return { title: doc.title, data };
   }
 }

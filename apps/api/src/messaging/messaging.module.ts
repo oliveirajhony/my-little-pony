@@ -1,17 +1,32 @@
-import { type Clock, type DocumentRepository, MarkDocumentIndexed } from '@my-little-pony/core';
+import {
+  type Clock,
+  type DocumentPdfStorage,
+  type DocumentRepository,
+  GenerateDocumentPdf,
+  MarkDocumentIndexed,
+  type PdfRenderer,
+} from '@my-little-pony/core';
 import { Global, Module } from '@nestjs/common';
-import { CLOCK, DOCUMENT_REPOSITORY, EVENT_PUBLISHER } from '../tokens';
+import {
+  CLOCK,
+  DOCUMENT_PDF_STORAGE,
+  DOCUMENT_REPOSITORY,
+  EVENT_PUBLISHER,
+  PDF_RENDERER,
+} from '../tokens';
 import { IndexCompletionConsumer } from './index-completion.consumer';
+import { PdfGenerationConsumer } from './pdf-generation.consumer';
 import { RabbitConnection } from './rabbit.connection';
 import { RabbitEventPublisher } from './rabbit-event-publisher';
 
-// Owns the RabbitMQ connection, the EventPublisher port and the completion
-// consumer that projects indexing results back onto documents.
+// Owns the RabbitMQ connection, the EventPublisher port and the consumers that
+// project indexing results and generate PDFs off published documents.
 @Global()
 @Module({
   providers: [
     RabbitConnection,
     IndexCompletionConsumer,
+    PdfGenerationConsumer,
     {
       provide: EVENT_PUBLISHER,
       inject: [RabbitConnection],
@@ -21,6 +36,12 @@ import { RabbitEventPublisher } from './rabbit-event-publisher';
       provide: MarkDocumentIndexed,
       inject: [DOCUMENT_REPOSITORY, CLOCK],
       useFactory: (repo: DocumentRepository, clock: Clock) => new MarkDocumentIndexed(repo, clock),
+    },
+    {
+      provide: GenerateDocumentPdf,
+      inject: [DOCUMENT_REPOSITORY, PDF_RENDERER, DOCUMENT_PDF_STORAGE],
+      useFactory: (repo: DocumentRepository, renderer: PdfRenderer, storage: DocumentPdfStorage) =>
+        new GenerateDocumentPdf(repo, renderer, storage),
     },
   ],
   exports: [EVENT_PUBLISHER],

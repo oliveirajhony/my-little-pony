@@ -1,14 +1,26 @@
-import type { DocumentIndexRequested, EventPublisher } from '@my-little-pony/core';
+import type {
+  DocumentIndexRequested,
+  DocumentPdfRequested,
+  EventPublisher,
+} from '@my-little-pony/core';
 import type { RabbitConnection } from './rabbit.connection';
-import { DOCUMENTS_EXCHANGE, RK_INDEX_REQUESTED } from './rabbit.constants';
+import { DOCUMENTS_EXCHANGE, RK_INDEX_REQUESTED, RK_PDF_REQUESTED } from './rabbit.constants';
 
 /** EventPublisher port backed by a RabbitMQ topic exchange. */
 export class RabbitEventPublisher implements EventPublisher {
   constructor(private readonly connection: RabbitConnection) {}
 
   async documentIndexRequested(event: DocumentIndexRequested): Promise<void> {
+    await this.publish(RK_INDEX_REQUESTED, event);
+  }
+
+  async documentPdfRequested(event: DocumentPdfRequested): Promise<void> {
+    await this.publish(RK_PDF_REQUESTED, event);
+  }
+
+  private async publish(routingKey: string, event: unknown): Promise<void> {
     const channel = await this.connection.channel();
-    channel.publish(DOCUMENTS_EXCHANGE, RK_INDEX_REQUESTED, Buffer.from(JSON.stringify(event)), {
+    channel.publish(DOCUMENTS_EXCHANGE, routingKey, Buffer.from(JSON.stringify(event)), {
       contentType: 'application/json',
       persistent: true,
     });

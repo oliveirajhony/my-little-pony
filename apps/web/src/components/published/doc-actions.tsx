@@ -2,15 +2,21 @@
 
 import { Download, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { API_BASE } from '../../lib/api-client';
 import { EmailDialog } from './email-dialog';
 
-/** Ações do documento: baixar (impressão), receber por e-mail, tela cheia. */
-export function DocActions({ onFullscreen }: { onFullscreen: () => void }) {
+type Props = { ownerId: string; slug: string; onFullscreen: () => void };
+
+/** Ações do documento: baixar PDF (gerado no publish), receber por e-mail, tela cheia. */
+export function DocActions({ ownerId, slug, onFullscreen }: Props) {
+  const pdfUrl = `${API_BASE}/public/documents/${ownerId}/${encodeURIComponent(slug)}/pdf`;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button onClick={() => window.print()}>
-        <Download />
-        Baixar PDF
+      <Button asChild>
+        <a href={pdfUrl} rel="noopener">
+          <Download />
+          Baixar PDF
+        </a>
       </Button>
       <EmailDialog />
       <Button variant="outline" onClick={onFullscreen}>

@@ -8,6 +8,7 @@ import { HealthController } from '../health/health.controller';
 import { DomainExceptionFilter } from '../http/domain-exception.filter';
 import { InternalModule } from '../internal/internal.module';
 import { MessagingModule } from '../messaging/messaging.module';
+import { PdfModule } from '../pdf/pdf.module';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { PublicModule } from '../public/public.module';
 import { RateLimitModule } from '../rate-limit/rate-limit.module';
@@ -25,6 +26,7 @@ import { UsersModule } from '../users/users.module';
     MessagingModule,
     SecurityModule,
     StorageModule,
+    PdfModule,
     AuthModule,
     UsersModule,
     DocumentsModule,
