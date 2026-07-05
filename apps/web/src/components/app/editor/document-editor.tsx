@@ -5,11 +5,15 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
+import { Fragment, type Node as PMNode, Slice } from '@tiptap/pm/model';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
+import { Check, PanelRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { PaginationPlus } from 'tiptap-pagination-plus';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -17,6 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { getDocById, slugify, useDocuments, useDocumentsStore } from '../../../lib/documents-store';
+import type { DocStatus } from '../../../lib/mock-data';
+import { DocumentDetailsPanel } from './document-details-panel';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
 import { LineHeight } from './line-height';
@@ -43,7 +58,18 @@ function countWords(text: string) {
 }
 
 export function DocumentEditor() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingId = searchParams.get('id');
+  const { hydrated } = useDocuments();
+  const saveDoc = useDocumentsStore((s) => s.saveDoc);
+
+  const [docId, setDocId] = useState<string | null>(editingId);
   const [title, setTitle] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [status, setStatus] = useState<DocStatus>('draft');
+  // Slug follows the title until the user overrides it.
+  const [slugOverride, setSlugOverride] = useState<string | null>(null);
   const [images, setImages] = useState<FloatingImageData[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // Height of the paginated flow — keeps floating images inside the document bounds.
@@ -52,6 +78,7 @@ export function DocumentEditor() {
   const [deskWidth, setDeskWidth] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
   const nextImageId = useRef(0);
   const deskRef = useRef<HTMLDivElement>(null);
 
@@ -95,12 +122,66 @@ export function DocumentEditor() {
     content: INITIAL_CONTENT,
     editorProps: {
       attributes: { class: 'tiptap' },
+      // Drop empty paragraphs from pasted content (Word / Docs / web / editor
+      // copies) so pasting doesn't leave blank lines in the middle of the document.
+      transformPasted: (slice) => {
+        const kept: PMNode[] = [];
+        slice.content.forEach((node) => {
+          if (node.type.name === 'paragraph' && node.textContent.trim() === '') {
+            // Blank line (empty / whitespace / nbsp / <br>) — drop it, unless it
+            // actually holds an image.
+            let hasImage = false;
+            node.forEach((child) => {
+              if (child.type.name === 'image') hasImage = true;
+            });
+            if (!hasImage) return;
+          }
+          kept.push(node);
+        });
+        if (kept.length === slice.content.childCount) return slice;
+        return new Slice(Fragment.fromArray(kept), 0, 0);
+      },
     },
-    onCreate: ({ editor: e }) => setWordCount(countWords(e.getText())),
-    onUpdate: ({ editor: e }) => setWordCount(countWords(e.getText())),
+    onCreate: ({ editor: e }) => updateCounts(e.getText()),
+    onUpdate: ({ editor: e }) => updateCounts(e.getText()),
   });
 
+  function updateCounts(text: string) {
+    setWordCount(countWords(text));
+    setCharCount(text.replace(/\n/g, '').length);
+  }
+
   const { config, updateConfig, geometry } = usePageConfig(editor);
+
+  // Load an existing document when opened via /app/editor?id=… — waits for the
+  // store to rehydrate so we read persisted content, not the seed.
+  useEffect(() => {
+    if (!editor || !editingId || !hydrated) return;
+    const doc = getDocById(editingId);
+    if (!doc) return;
+    setTitle(doc.title);
+    setCategories(doc.categories);
+    setStatus(doc.status);
+    setSlugOverride(doc.slug);
+    editor.commands.setContent(doc.content ?? `<p>${doc.excerpt}</p>`);
+  }, [editor, editingId, hydrated]);
+
+  const slug = slugOverride ?? slugify(title);
+
+  function handleSave() {
+    if (!editor) return;
+    const id = saveDoc({
+      id: docId ?? undefined,
+      title,
+      content: editor.getHTML(),
+      text: editor.getText(),
+      categories,
+      slug,
+      status,
+    });
+    setDocId(id);
+    router.push('/app');
+  }
 
   // Measure the paginated flow (floating-image bounds) and the page count.
   useEffect(() => {
@@ -176,74 +257,125 @@ export function DocumentEditor() {
     transformOrigin: 'top left',
   } as CSSProperties;
 
+  const detailsPanel = (
+    <DocumentDetailsPanel
+      title={title}
+      onTitleChange={setTitle}
+      slug={slug}
+      onSlugChange={setSlugOverride}
+      categories={categories}
+      onCategoriesChange={setCategories}
+      status={status}
+      onStatusChange={setStatus}
+    />
+  );
+
+  const saveButton = (
+    <Button onClick={handleSave}>
+      <Check />
+      Salvar
+    </Button>
+  );
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <input
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        placeholder="Documento sem título"
-        aria-label="Título do documento"
-        className="w-full truncate bg-transparent px-1 font-display text-xl font-semibold outline-none placeholder:text-muted-foreground/50"
-      />
+    <div className="flex h-full min-h-0 overflow-hidden">
+      {/* Editor column: toolbar docked to top, status bar to bottom, canvas between. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Compact bar for narrow screens where the side panel is hidden. */}
+        <div className="flex shrink-0 items-center gap-2 border-b bg-card px-3 py-2 lg:hidden">
+          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold">
+            {title || 'Documento sem título'}
+          </span>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <PanelRight />
+                Detalhes
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="mlp-scrollbar w-80 gap-0 overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Detalhes</SheetTitle>
+                <SheetDescription>Título, categorias e publicação.</SheetDescription>
+              </SheetHeader>
+              <div className="px-4 pb-6">{detailsPanel}</div>
+            </SheetContent>
+          </Sheet>
+          {saveButton}
+        </div>
 
-      <EditorToolbar
-        editor={editor}
-        pageConfig={config}
-        onPageConfigChange={updateConfig}
-        onInsertImage={insertImage}
-      />
+        <EditorToolbar
+          editor={editor}
+          pageConfig={config}
+          onPageConfigChange={updateConfig}
+          onInsertImage={insertImage}
+        />
 
-      <div
-        ref={deskRef}
-        className="editor-desk min-h-0 flex-1 overflow-auto rounded-xl border p-3 sm:p-6 md:p-10"
-        onPointerDown={(event) => {
-          if (event.target === event.currentTarget) setSelectedId(null);
-        }}
-      >
-        {/* Reserves the scaled footprint so the scroll area matches the zoom. */}
         <div
-          className="mx-auto"
-          style={{ width: geometry.width * zoomValue, height: flowHeight * zoomValue }}
+          ref={deskRef}
+          className="editor-desk mlp-scrollbar min-h-0 flex-1 overflow-auto p-3 sm:p-6 md:p-10"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedId(null);
+          }}
         >
-          <div className="relative w-fit" style={pageStyle}>
-            <EditorContent editor={editor} />
+          {/* Reserves the scaled footprint so the scroll area matches the zoom. */}
+          <div
+            className="mx-auto"
+            style={{ width: geometry.width * zoomValue, height: flowHeight * zoomValue }}
+          >
+            <div className="relative w-fit" style={pageStyle}>
+              <EditorContent editor={editor} />
 
-            {images.map((image) => (
-              <FloatingImage
-                key={image.id}
-                data={image}
-                selected={selectedId === image.id}
-                bounds={{ w: geometry.width, h: flowHeight }}
-                onSelect={() => setSelectedId(image.id)}
-                onChange={(patch) => updateImage(image.id, patch)}
-                onRemove={() => removeImage(image.id)}
-              />
-            ))}
+              {images.map((image) => (
+                <FloatingImage
+                  key={image.id}
+                  data={image}
+                  selected={selectedId === image.id}
+                  bounds={{ w: geometry.width, h: flowHeight }}
+                  onSelect={() => setSelectedId(image.id)}
+                  onChange={(patch) => updateImage(image.id, patch)}
+                  onRemove={() => removeImage(image.id)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-between gap-3 rounded-t-xl border-t bg-card px-4 py-2 text-muted-foreground text-xs">
+          <span>
+            {pageCount} {pageCount === 1 ? 'página' : 'páginas'} · {wordCount}{' '}
+            {wordCount === 1 ? 'palavra' : 'palavras'} · {charCount}{' '}
+            {charCount === 1 ? 'caractere' : 'caracteres'}
+          </span>
+          <div className="flex items-center gap-2">
+            <span>Zoom</span>
+            <Select value={zoom} onValueChange={setZoom}>
+              <SelectTrigger size="sm" className="h-7 w-[104px]" aria-label="Zoom">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ZOOM_LEVELS.map((level) => (
+                  <SelectItem key={level.value} value={level.value}>
+                    {level.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-30 flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-1.5 text-muted-foreground text-xs">
-        <span>
-          {pageCount} {pageCount === 1 ? 'página' : 'páginas'} · {wordCount}{' '}
-          {wordCount === 1 ? 'palavra' : 'palavras'}
-        </span>
-        <div className="flex items-center gap-2">
-          <span>Zoom</span>
-          <Select value={zoom} onValueChange={setZoom}>
-            <SelectTrigger size="sm" className="h-7 w-[104px]" aria-label="Zoom">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ZOOM_LEVELS.map((level) => (
-                <SelectItem key={level.value} value={level.value}>
-                  {level.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Right inspector — the document's metadata, mirroring the left sidebar. */}
+      <aside className="hidden w-72 shrink-0 flex-col border-l bg-sidebar lg:flex">
+        <div className="shrink-0 border-b px-4 py-3">
+          <h2 className="font-display text-sm font-semibold tracking-tight">Detalhes</h2>
+          <p className="text-xs text-muted-foreground">Título, categorias e publicação.</p>
         </div>
-      </div>
+        <div className="mlp-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4">{detailsPanel}</div>
+        <div className="shrink-0 border-t px-4 py-3">
+          <div className="[&>button]:w-full">{saveButton}</div>
+        </div>
+      </aside>
     </div>
   );
 }
