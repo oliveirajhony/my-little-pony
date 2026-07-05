@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '../../components/app/app-sidebar';
 import { CommandMenu } from '../../components/app/command-menu';
-import { UserPanel } from '../../components/app/user-panel';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
@@ -12,10 +11,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
         </header>
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1">{children}</main>
       </SidebarInset>
       <CommandMenu />
-      <UserPanel />
     </SidebarProvider>
   );
 }
