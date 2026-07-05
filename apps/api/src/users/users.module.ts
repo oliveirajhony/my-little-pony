@@ -1,18 +1,28 @@
 import {
+  type AvatarStorage,
   ChangePassword,
   type Clock,
   GetProfile,
   type PasswordHasher,
   type RefreshTokenStore,
+  RemoveAvatar,
+  SetAvatar,
   UpdateProfile,
   type UserRepository,
 } from '@my-little-pony/core';
 import { Module } from '@nestjs/common';
-import { CLOCK, PASSWORD_HASHER, REFRESH_TOKEN_STORE, USER_REPOSITORY } from '../tokens';
+import {
+  AVATAR_STORAGE,
+  CLOCK,
+  PASSWORD_HASHER,
+  REFRESH_TOKEN_STORE,
+  USER_REPOSITORY,
+} from '../tokens';
+import { AvatarController } from './avatar.controller';
 import { UsersController } from './users.controller';
 
 @Module({
-  controllers: [UsersController],
+  controllers: [UsersController, AvatarController],
   providers: [
     {
       provide: GetProfile,
@@ -33,6 +43,18 @@ import { UsersController } from './users.controller';
         clock: Clock,
         store: RefreshTokenStore,
       ) => new ChangePassword(users, hasher, clock, store),
+    },
+    {
+      provide: SetAvatar,
+      inject: [USER_REPOSITORY, AVATAR_STORAGE, CLOCK],
+      useFactory: (users: UserRepository, storage: AvatarStorage, clock: Clock) =>
+        new SetAvatar(users, storage, clock),
+    },
+    {
+      provide: RemoveAvatar,
+      inject: [USER_REPOSITORY, AVATAR_STORAGE, CLOCK],
+      useFactory: (users: UserRepository, storage: AvatarStorage, clock: Clock) =>
+        new RemoveAvatar(users, storage, clock),
     },
   ],
 })

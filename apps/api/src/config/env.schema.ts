@@ -16,6 +16,14 @@ export const EnvSchema = z.object({
   JWT_REFRESH_TTL: z.string().default('7d'),
   // Allowed browser origin for CORS (the web app). Not a secret.
   WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
+  // Public base URL the API is reachable at — used to build avatar links.
+  API_PUBLIC_URL: z.string().url().default('http://localhost:3334'),
+  // MinIO object storage (local-dev infra creds, like Postgres — not secrets).
+  MINIO_ENDPOINT: z.string().default('localhost'),
+  MINIO_PORT: z.coerce.number().default(9010),
+  MINIO_ACCESS_KEY: z.string().default('mlp'),
+  MINIO_SECRET_KEY: z.string().default('mlpsecret123'),
+  MINIO_BUCKET: z.string().default('avatars'),
 });
 
 export type AppConfig = {
@@ -29,6 +37,12 @@ export type AppConfig = {
   jwtAccessTtl: string;
   jwtRefreshTtl: string;
   webOrigin: string;
+  apiPublicUrl: string;
+  minioEndpoint: string;
+  minioPort: number;
+  minioAccessKey: string;
+  minioSecretKey: string;
+  minioBucket: string;
 };
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -52,5 +66,11 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     jwtAccessTtl: env_.JWT_ACCESS_TTL,
     jwtRefreshTtl: env_.JWT_REFRESH_TTL,
     webOrigin: env_.WEB_ORIGIN,
+    apiPublicUrl: env_.API_PUBLIC_URL,
+    minioEndpoint: env_.MINIO_ENDPOINT,
+    minioPort: env_.MINIO_PORT,
+    minioAccessKey: env_.MINIO_ACCESS_KEY,
+    minioSecretKey: env_.MINIO_SECRET_KEY,
+    minioBucket: env_.MINIO_BUCKET,
   };
 }

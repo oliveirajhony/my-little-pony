@@ -3,7 +3,7 @@
 import { LogOut, Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Sidebar,
   SidebarContent,
@@ -16,15 +16,37 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useAuth } from '../../lib/auth-store';
 import { useCommandMenu } from '../../lib/command-menu-store';
-import { mockUser, screens } from '../../lib/mock-data';
+import { screens } from '../../lib/mock-data';
 import { DocIcon } from '../icons';
 import { ThemeSwitcher } from './theme-switcher';
+
+function initialsOf(name: string): string {
+  const parts = name.split(' ').filter(Boolean).slice(0, 2);
+  return (
+    parts
+      .map((p) => p[0])
+      .join('')
+      .toUpperCase() || '—'
+  );
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const openCommand = useCommandMenu((s) => s.setOpen);
+  const user = useAuth((s) => s.user);
+  const logout = useAuth((s) => s.logout);
+
+  const name = user?.name ?? '';
+  const email = user?.email ?? '';
+  const initials = initialsOf(name);
+
+  async function handleLogout() {
+    await logout();
+    router.push('/');
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -85,24 +107,23 @@ export function AppSidebar() {
           </SidebarMenuItem>
 
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip={mockUser.name}>
+            <SidebarMenuButton size="lg" asChild tooltip={name}>
               <Link href="/app/config">
                 <Avatar className="size-8 rounded-lg">
+                  {user?.avatarUrl && (
+                    <AvatarImage src={user.avatarUrl} alt="" className="rounded-lg" />
+                  )}
                   <AvatarFallback className="rounded-lg bg-accent text-accent-foreground">
-                    {mockUser.initials}
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col overflow-hidden text-left leading-tight">
-                  <span className="truncate text-sm font-medium">{mockUser.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">{mockUser.email}</span>
+                  <span className="truncate text-sm font-medium">{name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{email}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
-            <SidebarMenuAction
-              onClick={() => router.push('/')}
-              aria-label="Sair da conta"
-              showOnHover
-            >
+            <SidebarMenuAction onClick={handleLogout} aria-label="Sair da conta" showOnHover>
               <LogOut />
             </SidebarMenuAction>
           </SidebarMenuItem>
