@@ -33,14 +33,14 @@ export function DocumentEditor() {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: false, underline: false }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, underline: false }),
       Underline,
       TextStyle,
       FontFamily,
       FontSize,
       Color,
-      TextAlign.configure({ types: ['paragraph'] }),
-      LineHeight.configure({ types: ['paragraph'] }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      LineHeight.configure({ types: ['heading', 'paragraph'] }),
       Highlight.configure({ multicolor: true }),
       ResizableImage.configure({ inline: true, allowBase64: true }),
       // Real A4 pagination: content reflows across pages, like Word / Google Docs.

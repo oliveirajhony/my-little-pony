@@ -164,6 +164,13 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
         fontFamily: (style.fontFamily as string) ?? 'default',
         fontSize: (style.fontSize as string) ?? 'default',
         lineHeight: (e.getAttributes('paragraph').lineHeight as string) ?? 'default',
+        blockType: e.isActive('heading', { level: 1 })
+          ? 'h1'
+          : e.isActive('heading', { level: 2 })
+            ? 'h2'
+            : e.isActive('heading', { level: 3 })
+              ? 'h3'
+              : 'paragraph',
       };
     },
   });
@@ -219,6 +226,27 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
       </Hint>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
+
+      <Select
+        value={state.blockType}
+        onValueChange={(value) =>
+          value === 'paragraph'
+            ? chain().setParagraph().run()
+            : chain()
+                .setHeading({ level: Number(value.slice(1)) as 1 | 2 | 3 })
+                .run()
+        }
+      >
+        <SelectTrigger size="sm" className="w-[116px]" aria-label="Estilo do texto">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="paragraph">Normal</SelectItem>
+          <SelectItem value="h1">Título 1</SelectItem>
+          <SelectItem value="h2">Título 2</SelectItem>
+          <SelectItem value="h3">Título 3</SelectItem>
+        </SelectContent>
+      </Select>
 
       <FontPicker
         current={state.fontFamily}
