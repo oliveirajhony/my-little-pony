@@ -24,6 +24,10 @@ const MAP: Record<DomainErrorCode, { status: number; message: string }> = {
     message: 'Sua sessão expirou. Entre novamente.',
   },
   'user-not-found': { status: HttpStatus.NOT_FOUND, message: 'Usuário não encontrado.' },
+  'invalid-image': {
+    status: HttpStatus.BAD_REQUEST,
+    message: 'Envie uma imagem válida (até 5 MB).',
+  },
 };
 
 @Catch(DomainError)

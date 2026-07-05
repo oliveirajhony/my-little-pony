@@ -34,6 +34,19 @@ export interface IdGenerator {
   next(): string;
 }
 
+/** A single stored avatar: raw bytes plus the MIME type to serve it with. */
+export interface StoredAvatar {
+  data: Uint8Array;
+  contentType: string;
+}
+
+/** One private avatar per user, addressed by userId (adapter: MinIO in apps/api). */
+export interface AvatarStorage {
+  put(input: { userId: string; data: Uint8Array; contentType: string }): Promise<void>;
+  get(userId: string): Promise<StoredAvatar | null>;
+  remove(userId: string): Promise<void>;
+}
+
 export interface Clock {
   now(): Date;
 }
