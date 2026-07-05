@@ -18,6 +18,11 @@ export class UpdateProfileDto {
   @ValidateIf((_object, value) => value !== null)
   @IsString()
   avatarUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Senha atual — obrigatória ao trocar o e-mail' })
+  @IsOptional()
+  @IsString()
+  currentPassword?: string;
 }
 
 export class AvatarFromUrlDto {

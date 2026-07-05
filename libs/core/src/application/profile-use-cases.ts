@@ -16,12 +16,19 @@ export class GetProfile {
 export class UpdateProfile {
   constructor(
     private readonly users: UserRepository,
+    private readonly hasher: PasswordHasher,
     private readonly clock: Clock,
   ) {}
 
   async execute(
     userId: string,
-    input: { name?: string; email?: string; avatarUrl?: string | null },
+    input: {
+      name?: string;
+      email?: string;
+      avatarUrl?: string | null;
+      /** Obrigatória (e verificada) só quando o e-mail muda. */
+      currentPassword?: string;
+    },
   ): Promise<User> {
     const user = await this.users.findById(userId);
     if (!user) throw new DomainError('user-not-found');
@@ -29,6 +36,13 @@ export class UpdateProfile {
     if (input.email !== undefined) {
       const email = User.assertValidEmail(input.email);
       if (email !== user.email) {
+        // Trocar o e-mail exige confirmar a senha atual (segurança).
+        if (
+          !input.currentPassword ||
+          !(await this.hasher.verify(user.passwordHash, input.currentPassword))
+        ) {
+          throw new DomainError('bad-credentials');
+        }
         const existing = await this.users.findByEmail(email);
         if (existing && existing.id !== userId) throw new DomainError('email-taken');
         user.changeEmail(email, this.clock.now());
