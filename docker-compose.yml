@@ -63,6 +63,17 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # Vector store for the Python RAG service (apps/rag-service).
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      # +10 offset (HTTP 6343, gRPC 6344) to coexist with other local stacks.
+      - "6343:6333"
+      - "6344:6334"
+    volumes:
+      - mlp_qdrant:/qdrant/storage
+
 volumes:
   mlp_pg:
   mlp_minio:
+  mlp_qdrant:
