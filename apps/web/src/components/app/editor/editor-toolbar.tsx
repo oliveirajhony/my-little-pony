@@ -12,11 +12,11 @@ import {
   Bold,
   Highlighter,
   Image as ImageIcon,
-  ImagePlus,
   Italic,
   List,
   ListOrdered,
   Minus,
+  MoreHorizontal,
   Move,
   Pin,
   PinOff,
@@ -419,26 +419,19 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
           <ListOrdered />
         </Toggle>
       </Hint>
-      <Hint label="Linha horizontal">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8"
-          aria-label="Linha horizontal"
-          onClick={() => chain().setHorizontalRule().run()}
-        >
-          <Minus />
-        </Button>
-      </Hint>
       <DropdownMenu>
-        <Hint label="Inserir imagem">
+        <Hint label="Mais">
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8" aria-label="Inserir imagem">
-              <ImagePlus />
+            <Button variant="ghost" size="icon" className="size-8" aria-label="Mais opções">
+              <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
         </Hint>
         <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => chain().setHorizontalRule().run()}>
+            <Minus />
+            Linha horizontal
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => pickFile('inline')}>
             <ImageIcon />
             Imagem em linha
