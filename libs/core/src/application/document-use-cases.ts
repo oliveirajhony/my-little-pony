@@ -1,6 +1,7 @@
 import { Document, type IndexStatus } from '../domain/document.js';
 import { DomainError } from '../domain/errors.js';
 import type {
+  CacheStore,
   Clock,
   DocumentPage,
   DocumentQuery,
@@ -8,6 +9,33 @@ import type {
   EventPublisher,
   IdGenerator,
 } from './ports.js';
+
+export type PublicDocument = {
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string;
+  categories: string[];
+  publishedAt: string | null;
+  updatedAt: string;
+};
+
+/** Cache key for a published document served by its public slug. */
+export function publicDocumentKey(slug: string): string {
+  return `public:doc:${slug}`;
+}
+
+function toPublic(doc: Document): PublicDocument {
+  return {
+    title: doc.title,
+    slug: doc.slug,
+    content: doc.content,
+    excerpt: doc.excerpt,
+    categories: doc.categories,
+    publishedAt: doc.publishedAt ? doc.publishedAt.toISOString() : null,
+    updatedAt: doc.updatedAt.toISOString(),
+  };
+}
 
 /** Loads a document and asserts the caller owns it. */
 async function loadOwned(repo: DocumentRepository, id: string, ownerId: string): Promise<Document> {
@@ -140,6 +168,31 @@ export class UnpublishDocument {
     doc.unpublish(this.clock.now());
     await this.repo.save(doc);
     return doc;
+  }
+}
+
+/**
+ * Public read of a published document by slug, cached (read-through). Drafts and
+ * unknown slugs are 404. Invalidation on publish/unpublish is done by callers.
+ */
+export class GetPublicDocument {
+  constructor(
+    private readonly repo: DocumentRepository,
+    private readonly cache: CacheStore,
+    private readonly ttlSeconds: number,
+  ) {}
+
+  async execute(slug: string): Promise<PublicDocument> {
+    const key = publicDocumentKey(slug);
+    const cached = await this.cache.get<PublicDocument>(key);
+    if (cached) return cached;
+
+    const doc = await this.repo.findPublishedBySlug(slug);
+    if (!doc) throw new DomainError('document-not-found');
+
+    const view = toPublic(doc);
+    await this.cache.set(key, view, this.ttlSeconds);
+    return view;
   }
 }
 

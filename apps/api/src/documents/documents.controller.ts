@@ -1,9 +1,11 @@
 import {
+  type CacheStore,
   CreateDocument,
   DeleteDocument,
   GetDocument,
   ListDocuments,
   PublishDocument,
+  publicDocumentKey,
   SaveDraft,
   UnpublishDocument,
 } from '@my-little-pony/core';
@@ -13,6 +15,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Inject,
   Param,
   Patch,
   Post,
@@ -28,6 +31,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AccessTokenGuard, type AuthUser, CurrentUser } from '../auth/access-token.guard';
+import { CACHE_STORE } from '../tokens';
 import {
   DocumentDetailResponse,
   DocumentListResponse,
@@ -52,7 +56,12 @@ export class DocumentsController {
     private readonly deleteDocument: DeleteDocument,
     private readonly publishDocument: PublishDocument,
     private readonly unpublishDocument: UnpublishDocument,
+    @Inject(CACHE_STORE) private readonly cache: CacheStore,
   ) {}
+
+  private invalidatePublic(slug: string): Promise<void> {
+    return this.cache.delete(publicDocumentKey(slug));
+  }
 
   @Get()
   @ApiOperation({ summary: 'Lista os documentos do usuário (busca + filtros)' })
@@ -96,7 +105,7 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Autosave (concorrência otimista por versão)' })
   @ApiOkResponse({ type: DocumentDetailResponse })
   async save(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SaveDraftDto) {
-    return toDocumentDetail(
+    const detail = toDocumentDetail(
       await this.saveDraft.execute({
         id,
         ownerId: user.id,
@@ -107,6 +116,9 @@ export class DocumentsController {
         categories: dto.categories,
       }),
     );
+    // Keep the public page fresh when a published document is edited.
+    if (detail.status === 'published') await this.invalidatePublic(detail.slug);
+    return detail;
   }
 
   @Post(':id/publish')
@@ -114,7 +126,9 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Publica (gera slug único e marca para indexação)' })
   @ApiOkResponse({ type: DocumentSummaryResponse })
   async publish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return toDocumentSummary(await this.publishDocument.execute({ id, ownerId: user.id }));
+    const summary = toDocumentSummary(await this.publishDocument.execute({ id, ownerId: user.id }));
+    await this.invalidatePublic(summary.slug);
+    return summary;
   }
 
   @Post(':id/unpublish')
@@ -122,7 +136,11 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Despublica (volta a rascunho)' })
   @ApiOkResponse({ type: DocumentSummaryResponse })
   async unpublish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
-    return toDocumentSummary(await this.unpublishDocument.execute({ id, ownerId: user.id }));
+    const summary = toDocumentSummary(
+      await this.unpublishDocument.execute({ id, ownerId: user.id }),
+    );
+    await this.invalidatePublic(summary.slug);
+    return summary;
   }
 
   @Delete(':id')

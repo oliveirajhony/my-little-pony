@@ -3,12 +3,14 @@ import {
   CreateDocument,
   DeleteDocument,
   GetDocument,
+  GetPublicDocument,
   MarkDocumentIndexed,
   PublishDocument,
   SaveDraft,
   UnpublishDocument,
 } from './document-use-cases.js';
 import type {
+  CacheStore,
   Clock,
   DocumentPage,
   DocumentQuery,
@@ -16,6 +18,22 @@ import type {
   EventPublisher,
   IdGenerator,
 } from './ports.js';
+
+class FakeCache implements CacheStore {
+  store = new Map<string, unknown>();
+  hits = 0;
+  async get<T>(key: string): Promise<T | null> {
+    const v = this.store.get(key);
+    if (v !== undefined) this.hits += 1;
+    return (v as T) ?? null;
+  }
+  async set<T>(key: string, value: T): Promise<void> {
+    this.store.set(key, value);
+  }
+  async delete(key: string): Promise<void> {
+    this.store.delete(key);
+  }
+}
 
 const clock: Clock = { now: () => new Date('2026-07-05T00:00:00.000Z') };
 let seq = 0;
@@ -152,5 +170,31 @@ describe('document use cases', () => {
     await expect(
       new MarkDocumentIndexed(repo, clock).execute({ documentId: 'ghost', status: 'ready' }),
     ).resolves.toBeUndefined();
+  });
+  it('serves a published document publicly and caches it', async () => {
+    const repo = new FakeDocs();
+    const cache = new FakeCache();
+    const doc = await new CreateDocument(repo, ids, clock).execute({
+      ownerId: 'u1',
+      title: 'Publico',
+    });
+    await new PublishDocument(repo, clock, makeEvents().events).execute({
+      id: doc.id,
+      ownerId: 'u1',
+    });
+    const first = await new GetPublicDocument(repo, cache, 60).execute('publico');
+    expect(first.title).toBe('Publico');
+    // second call hits the cache
+    await new GetPublicDocument(repo, cache, 60).execute('publico');
+    expect(cache.hits).toBe(1);
+  });
+
+  it('404s a draft or unknown slug publicly', async () => {
+    const repo = new FakeDocs();
+    const cache = new FakeCache();
+    await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1', title: 'Rascunho' });
+    await expect(new GetPublicDocument(repo, cache, 60).execute('rascunho')).rejects.toThrow(
+      /document-not-found/,
+    );
   });
 });

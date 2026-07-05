@@ -14,13 +14,17 @@ export {
   CreateDocument,
   DeleteDocument,
   GetDocument,
+  GetPublicDocument,
   ListDocuments,
   MarkDocumentIndexed,
+  type PublicDocument,
   PublishDocument,
+  publicDocumentKey,
   SaveDraft,
   UnpublishDocument,
 } from './application/document-use-cases.js';
 export type {
+  CacheStore,
   Clock,
   DocumentIndexRequested,
   DocumentPage,

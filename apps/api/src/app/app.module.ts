@@ -9,6 +9,7 @@ import { DomainExceptionFilter } from '../http/domain-exception.filter';
 import { InternalModule } from '../internal/internal.module';
 import { MessagingModule } from '../messaging/messaging.module';
 import { PersistenceModule } from '../persistence/persistence.module';
+import { PublicModule } from '../public/public.module';
 import { RedisModule } from '../redis/redis.module';
 import { UsersModule } from '../users/users.module';
 
@@ -22,6 +23,7 @@ import { UsersModule } from '../users/users.module';
     AuthModule,
     UsersModule,
     DocumentsModule,
+    PublicModule,
     InternalModule,
   ],
   controllers: [HealthController],

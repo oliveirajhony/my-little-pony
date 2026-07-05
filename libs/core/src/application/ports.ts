@@ -42,6 +42,13 @@ export interface EventPublisher {
   documentIndexRequested(event: DocumentIndexRequested): Promise<void>;
 }
 
+/** Key/value cache with TTL (Redis adapter). */
+export interface CacheStore {
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, value: T, ttlSeconds: number): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */
 export interface RefreshTokenStore {
   /** Persist a token for a user with a TTL; returns nothing. */
