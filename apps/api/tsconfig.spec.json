@@ -6,7 +6,8 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "target": "es2021",
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true
   },
   "include": ["vitest.config.mts", "src/**/*.test.ts", "src/**/*.spec.ts", "src/**/*.d.ts"],
   "references": [

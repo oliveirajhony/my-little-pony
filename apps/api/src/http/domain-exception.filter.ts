@@ -1,0 +1,46 @@
+import { DomainError, type DomainErrorCode } from '@my-little-pony/core';
+import {
+  type ArgumentsHost,
+  Catch,
+  type ExceptionFilter,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import type { Response } from 'express';
+
+// Maps internal (English) domain error codes to an HTTP status and a pt-BR
+// message shown to the user. Keeps presentation strings out of the domain.
+const MAP: Record<DomainErrorCode, { status: number; message: string }> = {
+  'invalid-name': { status: HttpStatus.BAD_REQUEST, message: 'Informe um nome válido.' },
+  'invalid-email': { status: HttpStatus.BAD_REQUEST, message: 'Confira o e-mail digitado.' },
+  'weak-password': {
+    status: HttpStatus.BAD_REQUEST,
+    message: 'A senha precisa ter ao menos 8 caracteres.',
+  },
+  'email-taken': { status: HttpStatus.CONFLICT, message: 'Este e-mail já está em uso.' },
+  'bad-credentials': { status: HttpStatus.UNAUTHORIZED, message: 'E-mail ou senha incorretos.' },
+  'stale-token': {
+    status: HttpStatus.UNAUTHORIZED,
+    message: 'Sua sessão expirou. Entre novamente.',
+  },
+  'user-not-found': { status: HttpStatus.NOT_FOUND, message: 'Usuário não encontrado.' },
+};
+
+@Catch(DomainError)
+export class DomainExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(DomainExceptionFilter.name);
+
+  catch(error: DomainError, host: ArgumentsHost): void {
+    const response = host.switchToHttp().getResponse<Response>();
+    const mapped = MAP[error.code] ?? {
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: 'Algo deu errado.',
+    };
+    if (mapped.status >= 500) this.logger.error(`Unmapped domain error: ${error.code}`);
+    response.status(mapped.status).json({
+      statusCode: mapped.status,
+      code: error.code,
+      message: mapped.message,
+    });
+  }
+}
