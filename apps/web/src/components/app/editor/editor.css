@@ -48,7 +48,7 @@
   /* Follows the page color so text stays legible on dark pages too. */
   color: var(--page-fg, #1d1d1f);
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .tiptap > :first-child {
