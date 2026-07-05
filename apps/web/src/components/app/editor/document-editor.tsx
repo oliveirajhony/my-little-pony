@@ -129,7 +129,7 @@ export function DocumentEditor() {
       />
 
       <div
-        className="editor-desk min-h-0 flex-1 overflow-auto rounded-xl border p-6 md:p-10"
+        className="editor-desk min-h-0 flex-1 overflow-auto rounded-xl border p-3 sm:p-6 md:p-10"
         onPointerDown={(event) => {
           if (event.target === event.currentTarget) setSelectedId(null);
         }}

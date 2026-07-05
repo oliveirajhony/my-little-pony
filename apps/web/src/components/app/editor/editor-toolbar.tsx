@@ -178,7 +178,7 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-xl border bg-card p-1.5 shadow-sm">
+    <div className="editor-toolbar-scroll flex items-center gap-1 overflow-x-auto rounded-xl border bg-card p-1.5 shadow-sm sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
       <Hint label="Desfazer">
         <Button
           variant="ghost"
