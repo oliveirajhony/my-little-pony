@@ -1,17 +1,28 @@
 'use client';
 
-import { type FormEvent, useId, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { type FormEvent, useEffect, useId, useState } from 'react';
+import { asApiError } from '../../lib/api-client';
+import { useAuth } from '../../lib/auth-store';
 import { useLoginUi } from '../../lib/login-ui-store';
-import { AUTH_MESSAGES, authenticate, DEMO_USER } from '../../lib/mock-auth';
 import { isValidEmail } from '../../lib/validation';
 import { AlertIcon, CheckIcon, DocIcon, EyeIcon, EyeOffIcon, GitHubIcon } from '../icons';
 import styles from './login-form.module.css';
 
 const REPO_URL = 'https://github.com/oliveirajhony/my-little-pony';
+const MIN_PASSWORD = 8;
 
 type Status = 'idle' | 'loading' | 'success';
+type Mode = 'login' | 'register';
 
-export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) {
+export function LoginForm() {
+  const router = useRouter();
+  const login = useAuth((s) => s.login);
+  const register = useAuth((s) => s.register);
+  const authStatus = useAuth((s) => s.status);
+
+  const [mode, setMode] = useState<Mode>('login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +31,7 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
   const [error, setError] = useState<string | null>(null);
   const [shaking, setShaking] = useState(false);
 
+  const nameId = useId();
   const emailId = useId();
   const passwordId = useId();
   const errorId = useId();
@@ -28,10 +40,22 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
   const setPasswordVisible = useLoginUi((s) => s.setPasswordVisible);
   const triggerReaction = useLoginUi((s) => s.react);
 
+  const isRegister = mode === 'register';
+
+  // Já autenticado (ex.: silent-refresh) → segue direto para a área logada.
+  useEffect(() => {
+    if (authStatus === 'authed') router.replace('/app');
+  }, [authStatus, router]);
+
   function fail(message: string) {
     setError(message);
     setShaking(true);
     triggerReaction('error');
+  }
+
+  function switchMode() {
+    setMode((m) => (m === 'login' ? 'register' : 'login'));
+    setError(null);
   }
 
   function toggleShowPassword() {
@@ -45,23 +69,37 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
     if (status !== 'idle') return;
     setError(null);
 
+    if (isRegister && name.trim().length === 0) {
+      fail('Informe seu nome.');
+      return;
+    }
     if (!isValidEmail(email)) {
-      fail(AUTH_MESSAGES['invalid-email']);
+      fail('Confira o e-mail digitado.');
       return;
     }
     if (password.length === 0) {
-      fail(AUTH_MESSAGES['empty-password']);
+      fail('Digite sua senha.');
+      return;
+    }
+    if (isRegister && password.length < MIN_PASSWORD) {
+      fail('A senha precisa ter ao menos 8 caracteres.');
       return;
     }
 
     setStatus('loading');
-    const result = await authenticate(email, password, authDelayMs);
-    if (result.ok) {
+    try {
+      if (isRegister) {
+        await register(name.trim(), email.trim(), password);
+      } else {
+        await login(email.trim(), password);
+      }
       setStatus('success');
       triggerReaction('success');
-    } else {
+      // Deixa a comemoração do pônei aparecer antes de navegar.
+      setTimeout(() => router.replace('/app'), 700);
+    } catch (err) {
       setStatus('idle');
-      fail(AUTH_MESSAGES[result.reason]);
+      fail(asApiError(err)?.message ?? 'Não foi possível conectar. Tente de novo.');
     }
   }
 
@@ -84,10 +122,30 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
         <span className={styles.tag}>Beta</span>
       </div>
 
-      <h1 className={styles.head}>Bem-vindo de volta</h1>
+      <h1 className={styles.head}>{isRegister ? 'Crie sua conta' : 'Bem-vindo de volta'}</h1>
       <p className={styles.sub}>
-        Entre para acessar seus rascunhos e documentos publicados — e continuar de onde parou.
+        {isRegister
+          ? 'Leva menos de um minuto — comece a escrever e publicar seus documentos.'
+          : 'Entre para acessar seus rascunhos e documentos publicados — e continuar de onde parou.'}
       </p>
+
+      {isRegister && (
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor={nameId}>
+            Nome
+          </label>
+          <input
+            id={nameId}
+            className={styles.input}
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Seu nome"
+            autoComplete="name"
+            disabled={locked}
+          />
+        </div>
+      )}
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor={emailId}>
@@ -121,7 +179,7 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
             onFocus={() => setFocusedField('password')}
             onBlur={() => setFocusedField(null)}
             placeholder="••••••••"
-            autoComplete="current-password"
+            autoComplete={isRegister ? 'new-password' : 'current-password'}
             disabled={locked}
           />
           <button
@@ -136,23 +194,25 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
         </div>
       </div>
 
-      <div className={styles.row}>
-        <label className={styles.check}>
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-            disabled={locked}
-          />
-          <span className={styles.checkBox}>
-            <CheckIcon />
-          </span>
-          Manter conectado
-        </label>
-        <a className={styles.link} href="#top">
-          Esqueceu a senha?
-        </a>
-      </div>
+      {!isRegister && (
+        <div className={styles.row}>
+          <label className={styles.check}>
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              disabled={locked}
+            />
+            <span className={styles.checkBox}>
+              <CheckIcon />
+            </span>
+            Manter conectado
+          </label>
+          <a className={styles.link} href="#top">
+            Esqueceu a senha?
+          </a>
+        </div>
+      )}
 
       <button
         type="submit"
@@ -166,6 +226,8 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
           </span>
         ) : busy ? (
           <span className={styles.spinner} aria-hidden="true" />
+        ) : isRegister ? (
+          'Criar conta'
         ) : (
           'Entrar'
         )}
@@ -180,16 +242,12 @@ export function LoginForm({ authDelayMs = 900 }: { authDelayMs?: number } = {}) 
         ) : null}
       </p>
 
-      <p className={styles.demo}>
-        Demo — use <code>{DEMO_USER.email}</code> e <code>{DEMO_USER.password}</code>
-      </p>
-
       <div className={styles.foot}>
         <span>
-          Novo por aqui?{' '}
-          <a className={styles.link} href="#top">
-            Criar conta
-          </a>
+          {isRegister ? 'Já tem conta? ' : 'Novo por aqui? '}
+          <button type="button" className={styles.linkBtn} onClick={switchMode} disabled={locked}>
+            {isRegister ? 'Entrar' : 'Criar conta'}
+          </button>
         </span>
         <a className={styles.repo} href={REPO_URL} target="_blank" rel="noreferrer">
           <GitHubIcon /> GitHub
