@@ -1,5 +1,5 @@
 import { GetPublicDocument } from '@my-little-pony/core';
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, ParseUUIDPipe } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -36,7 +36,9 @@ export class PublicController {
   @ApiOperation({ summary: 'Documento publicado, por autor + slug (anônimo, com cache)' })
   @ApiOkResponse({ type: PublicDocumentResponse })
   content(
-    @Param('ownerId') ownerId: string,
+    // ownerId malformado não pode existir: cai em 404 (não 500 do cast de uuid).
+    @Param('ownerId', new ParseUUIDPipe({ exceptionFactory: () => new NotFoundException() }))
+    ownerId: string,
     @Param('slug') slug: string,
   ): Promise<PublicDocumentResponse> {
     return this.getPublicDocument.execute(ownerId, slug);
