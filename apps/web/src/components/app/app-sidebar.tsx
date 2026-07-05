@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/sidebar';
 import { useCommandMenu } from '../../lib/command-menu-store';
 import { mockUser, screens } from '../../lib/mock-data';
-import { useUserPanel } from '../../lib/user-panel-store';
 import { DocIcon } from '../icons';
 import { ThemeSwitcher } from './theme-switcher';
 
@@ -26,7 +25,6 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const openCommand = useCommandMenu((s) => s.setOpen);
-  const openUser = useUserPanel((s) => s.setOpen);
 
   return (
     <Sidebar collapsible="icon">
@@ -87,16 +85,18 @@ export function AppSidebar() {
           </SidebarMenuItem>
 
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" onClick={() => openUser(true)} tooltip={mockUser.name}>
-              <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-accent text-accent-foreground">
-                  {mockUser.initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col overflow-hidden text-left leading-tight">
-                <span className="truncate text-sm font-medium">{mockUser.name}</span>
-                <span className="truncate text-xs text-muted-foreground">{mockUser.email}</span>
-              </div>
+            <SidebarMenuButton size="lg" asChild tooltip={mockUser.name}>
+              <Link href="/app/config">
+                <Avatar className="size-8 rounded-lg">
+                  <AvatarFallback className="rounded-lg bg-accent text-accent-foreground">
+                    {mockUser.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col overflow-hidden text-left leading-tight">
+                  <span className="truncate text-sm font-medium">{mockUser.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{mockUser.email}</span>
+                </div>
+              </Link>
             </SidebarMenuButton>
             <SidebarMenuAction
               onClick={() => router.push('/')}

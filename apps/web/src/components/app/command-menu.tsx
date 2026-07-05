@@ -14,10 +14,12 @@ import {
   CommandShortcut,
 } from '@/components/ui/command';
 import { useCommandMenu } from '../../lib/command-menu-store';
-import { documents, screens } from '../../lib/mock-data';
+import { useDocuments } from '../../lib/documents-store';
+import { screens } from '../../lib/mock-data';
 
 export function CommandMenu() {
   const router = useRouter();
+  const { documents } = useDocuments();
   const open = useCommandMenu((s) => s.open);
   const setOpen = useCommandMenu((s) => s.setOpen);
   const toggle = useCommandMenu((s) => s.toggle);
@@ -86,7 +88,7 @@ export function CommandMenu() {
           {documents.map((doc) => (
             <CommandItem
               key={doc.id}
-              onSelect={() => run(() => router.push(`/app/documentos/${doc.slug}`))}
+              onSelect={() => run(() => router.push(`/app/editor?id=${doc.id}`))}
               keywords={doc.categories}
             >
               {doc.status === 'draft' ? <PenLine /> : <FileText />}

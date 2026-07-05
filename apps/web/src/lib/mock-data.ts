@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Compass, FileText, Globe, LayoutGrid, PenLine, Settings } from 'lucide-react';
+import { Globe, Settings } from 'lucide-react';
 
 export const mockUser = {
   name: 'Jhony Oliveira',
@@ -11,11 +11,16 @@ export type Screen = { title: string; href: string; icon: LucideIcon };
 
 export const screens: Screen[] = [
   { title: 'Documentos', href: '/app', icon: Globe },
-  { title: 'Rascunhos', href: '/app/rascunhos', icon: PenLine },
-  { title: 'Todos os documentos', href: '/app/documentos', icon: FileText },
-  { title: 'Explorar', href: '/app/explorar', icon: Compass },
-  { title: 'Modelos', href: '/app/modelos', icon: LayoutGrid },
   { title: 'Configurações', href: '/app/config', icon: Settings },
+];
+
+export type Shortcut = { label: string; keys: string[] };
+
+export const shortcuts: Shortcut[] = [
+  { label: 'Abrir busca e comandos', keys: ['Alt', 'B'] },
+  { label: 'Alternar menu lateral', keys: ['Ctrl', 'B'] },
+  { label: 'Criar nova nota', keys: ['N'] },
+  { label: 'Ir para Documentos', keys: ['G', 'D'] },
 ];
 
 export type DocStatus = 'published' | 'draft';
@@ -28,6 +33,8 @@ export type Doc = {
   status: DocStatus;
   updatedAt: string;
   slug: string;
+  /** Full editor HTML. Absent on seed docs (they only carry an excerpt). */
+  content?: string;
 };
 
 export const documents: Doc[] = [

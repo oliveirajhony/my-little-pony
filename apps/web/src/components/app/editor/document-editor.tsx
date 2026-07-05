@@ -1,73 +1,235 @@
 'use client';
 
 import { Highlight } from '@tiptap/extension-highlight';
+import { Placeholder } from '@tiptap/extension-placeholder';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
+import { Fragment, type Node as PMNode, Slice } from '@tiptap/pm/model';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
+import { Check, PanelRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { PaginationPlus } from 'tiptap-pagination-plus';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { getDocById, slugify, useDocuments, useDocumentsStore } from '../../../lib/documents-store';
+import type { DocStatus } from '../../../lib/mock-data';
+import { DocumentDetailsPanel } from './document-details-panel';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
+import { LineHeight } from './line-height';
+import { DEFAULT_GEOMETRY, readableTextColor } from './page-config';
 import { ResizableImage } from './resizable-image';
+import { usePageConfig } from './use-page-config';
 
 export type ImageMode = 'inline' | 'floating';
 
-export type Orientation = 'portrait' | 'landscape';
+const INITIAL_CONTENT = '<p></p>';
 
-// A4 at 96dpi.
-const A4_WIDTH = 794;
-const A4_HEIGHT = 1123;
+const ZOOM_LEVELS = [
+  { value: 'fit', label: 'Ajustar' },
+  { value: '0.5', label: '50%' },
+  { value: '0.75', label: '75%' },
+  { value: '1', label: '100%' },
+  { value: '1.25', label: '125%' },
+  { value: '1.5', label: '150%' },
+];
 
-const INITIAL_CONTENT = `
-  <p><strong><span style="font-size: 30px">Documento sem título</span></strong></p>
-  <p>Comece a escrever aqui. Use a barra acima para formatar: fonte, tamanho, cor, alinhamento, listas e mais — e insira imagens para arrastar onde quiser.</p>
-`;
-
-let nextImageId = 0;
+function countWords(text: string) {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
 
 export function DocumentEditor() {
-  const [orientation, setOrientation] = useState<Orientation>('portrait');
-  const [pageBg, setPageBg] = useState('#ffffff');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingId = searchParams.get('id');
+  const { hydrated } = useDocuments();
+  const saveDoc = useDocumentsStore((s) => s.saveDoc);
+
+  const [docId, setDocId] = useState<string | null>(editingId);
+  const [title, setTitle] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [status, setStatus] = useState<DocStatus>('draft');
+  // Slug follows the title until the user overrides it.
+  const [slugOverride, setSlugOverride] = useState<string | null>(null);
   const [images, setImages] = useState<FloatingImageData[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // Height of the paginated flow — keeps floating images inside the document bounds.
+  const [flowHeight, setFlowHeight] = useState(DEFAULT_GEOMETRY.height);
+  const [zoom, setZoom] = useState('1');
+  const [deskWidth, setDeskWidth] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
+  const nextImageId = useRef(0);
+  const deskRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: false, underline: false }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, underline: false }),
       Underline,
       TextStyle,
       FontFamily,
       FontSize,
       Color,
-      TextAlign.configure({ types: ['paragraph'] }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      LineHeight.configure({ types: ['heading', 'paragraph'] }),
       Highlight.configure({ multicolor: true }),
+      Placeholder.configure({ placeholder: 'Comece a escrever…' }),
       ResizableImage.configure({ inline: true, allowBase64: true }),
+      // Real A4 pagination: content reflows across pages, like Word / Google Docs.
+      // Size and margins are then driven by usePageConfig (single source of truth).
+      PaginationPlus.configure({
+        pageWidth: DEFAULT_GEOMETRY.width,
+        pageHeight: DEFAULT_GEOMETRY.height,
+        pageGap: 28,
+        // Gap fill; the theme-aware desk color is enforced via editor.css.
+        pageBreakBackground: '#e8eaef',
+        pageGapBorderSize: 0,
+        pageGapBorderColor: 'transparent',
+        marginTop: DEFAULT_GEOMETRY.margins.top,
+        marginBottom: DEFAULT_GEOMETRY.margins.bottom,
+        marginLeft: DEFAULT_GEOMETRY.margins.left,
+        marginRight: DEFAULT_GEOMETRY.margins.right,
+        contentMarginTop: 0,
+        contentMarginBottom: 0,
+        // Clean pages — no default page numbers / headers / footers.
+        headerLeft: '',
+        headerRight: '',
+        footerLeft: '',
+        footerRight: '',
+      }),
     ],
     content: INITIAL_CONTENT,
     editorProps: {
       attributes: { class: 'tiptap' },
+      // Drop empty paragraphs from pasted content (Word / Docs / web / editor
+      // copies) so pasting doesn't leave blank lines in the middle of the document.
+      transformPasted: (slice) => {
+        const kept: PMNode[] = [];
+        slice.content.forEach((node) => {
+          if (node.type.name === 'paragraph' && node.textContent.trim() === '') {
+            // Blank line (empty / whitespace / nbsp / <br>) — drop it, unless it
+            // actually holds an image.
+            let hasImage = false;
+            node.forEach((child) => {
+              if (child.type.name === 'image') hasImage = true;
+            });
+            if (!hasImage) return;
+          }
+          kept.push(node);
+        });
+        if (kept.length === slice.content.childCount) return slice;
+        return new Slice(Fragment.fromArray(kept), 0, 0);
+      },
     },
+    onCreate: ({ editor: e }) => updateCounts(e.getText()),
+    onUpdate: ({ editor: e }) => updateCounts(e.getText()),
   });
 
-  const width = orientation === 'portrait' ? A4_WIDTH : A4_HEIGHT;
-  const minHeight = orientation === 'portrait' ? A4_HEIGHT : A4_WIDTH;
+  function updateCounts(text: string) {
+    setWordCount(countWords(text));
+    setCharCount(text.replace(/\n/g, '').length);
+  }
+
+  const { config, updateConfig, geometry } = usePageConfig(editor);
+
+  // Load an existing document when opened via /app/editor?id=… — waits for the
+  // store to rehydrate so we read persisted content, not the seed.
+  useEffect(() => {
+    if (!editor || !editingId || !hydrated) return;
+    const doc = getDocById(editingId);
+    if (!doc) return;
+    setTitle(doc.title);
+    setCategories(doc.categories);
+    setStatus(doc.status);
+    setSlugOverride(doc.slug);
+    editor.commands.setContent(doc.content ?? `<p>${doc.excerpt}</p>`);
+  }, [editor, editingId, hydrated]);
+
+  const slug = slugOverride ?? slugify(title);
+
+  function handleSave() {
+    if (!editor) return;
+    const id = saveDoc({
+      id: docId ?? undefined,
+      title,
+      content: editor.getHTML(),
+      text: editor.getText(),
+      categories,
+      slug,
+      status,
+    });
+    setDocId(id);
+    router.push('/app');
+  }
+
+  // Measure the paginated flow (floating-image bounds) and the page count.
+  useEffect(() => {
+    const el = editor?.view.dom as HTMLElement | undefined;
+    if (!el) return;
+    const measure = () => {
+      setFlowHeight(el.scrollHeight);
+      setPageCount(el.querySelector('[data-rm-pagination]')?.children.length ?? 1);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    measure();
+    return () => observer.disconnect();
+  }, [editor]);
+
+  // Track the available desk width so "Ajustar" (fit) can size the page to it.
+  useEffect(() => {
+    const el = deskRef.current;
+    if (!el) return;
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      setDeskWidth(
+        el.clientWidth - Number.parseFloat(cs.paddingLeft) - Number.parseFloat(cs.paddingRight),
+      );
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    measure();
+    return () => observer.disconnect();
+  }, []);
 
   function insertImage(src: string, mode: ImageMode) {
     const probe = new window.Image();
     probe.onload = () => {
       const w = Math.min(360, probe.naturalWidth || 360);
+      const aspect = probe.naturalWidth / probe.naturalHeight || 1;
       if (mode === 'inline') {
+        // Pass the aspect so the node reserves its height up front and pagination
+        // stays correct even before the image finishes loading.
         editor
           ?.chain()
           .focus()
-          .setImage({ src, width: w } as { src: string })
+          .insertContent({ type: 'image', attrs: { src, width: w, aspect } })
           .run();
         return;
       }
-      const id = ++nextImageId;
-      const aspect = probe.naturalWidth / probe.naturalHeight || 1;
+      nextImageId.current += 1;
+      const id = nextImageId.current;
       setImages((prev) => [...prev, { id, src, x: 120, y: 140, w, aspect }]);
       setSelectedId(id);
     };
@@ -83,70 +245,137 @@ export function DocumentEditor() {
     setSelectedId(null);
   }
 
-  // Measure the content to draw page-break markers at each A4 boundary.
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState(0);
+  // "Ajustar" scales the page to the desk width; otherwise use the chosen level.
+  const zoomValue =
+    zoom === 'fit' ? (deskWidth > 0 ? Math.max(0.2, deskWidth / geometry.width) : 1) : Number(zoom);
 
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => setContentHeight(el.offsetHeight));
-    observer.observe(el);
-    setContentHeight(el.offsetHeight);
-    return () => observer.disconnect();
-  }, []);
+  const pageStyle = {
+    '--page-bg': config.pageColor,
+    '--page-fg': readableTextColor(config.pageColor),
+    // scale for display only — pagination still measures the unscaled layout.
+    transform: `scale(${zoomValue})`,
+    transformOrigin: 'top left',
+  } as CSSProperties;
 
-  const pageCount = Math.max(1, Math.ceil((contentHeight || minHeight) / minHeight));
-  const sheetHeight = pageCount * minHeight;
+  const detailsPanel = (
+    <DocumentDetailsPanel
+      title={title}
+      onTitleChange={setTitle}
+      slug={slug}
+      onSlugChange={setSlugOverride}
+      categories={categories}
+      onCategoriesChange={setCategories}
+      status={status}
+      onStatusChange={setStatus}
+    />
+  );
+
+  const saveButton = (
+    <Button onClick={handleSave}>
+      <Check />
+      Salvar
+    </Button>
+  );
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <EditorToolbar
-        editor={editor}
-        orientation={orientation}
-        onOrientationChange={setOrientation}
-        onInsertImage={insertImage}
-        onPageBgChange={setPageBg}
-      />
+    <div className="flex h-full min-h-0 overflow-hidden">
+      {/* Editor column: toolbar docked to top, status bar to bottom, canvas between. */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Compact bar for narrow screens where the side panel is hidden. */}
+        <div className="flex shrink-0 items-center gap-2 border-b bg-card px-3 py-2 lg:hidden">
+          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold">
+            {title || 'Documento sem título'}
+          </span>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                <PanelRight />
+                Detalhes
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="mlp-scrollbar w-80 gap-0 overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Detalhes</SheetTitle>
+                <SheetDescription>Título, categorias e publicação.</SheetDescription>
+              </SheetHeader>
+              <div className="px-4 pb-6">{detailsPanel}</div>
+            </SheetContent>
+          </Sheet>
+          {saveButton}
+        </div>
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-muted/40 p-6 md:p-10">
+        <EditorToolbar
+          editor={editor}
+          pageConfig={config}
+          onPageConfigChange={updateConfig}
+          onInsertImage={insertImage}
+        />
+
         <div
-          className="relative mx-auto shadow-lg ring-1 ring-black/5"
-          style={{ width, height: sheetHeight, background: pageBg }}
+          ref={deskRef}
+          className="editor-desk mlp-scrollbar min-h-0 flex-1 overflow-auto p-3 sm:p-6 md:p-10"
           onPointerDown={(event) => {
             if (event.target === event.currentTarget) setSelectedId(null);
           }}
         >
-          <div ref={contentRef} className="px-16 py-[72px]">
-            <EditorContent editor={editor} />
-          </div>
+          {/* Reserves the scaled footprint so the scroll area matches the zoom. */}
+          <div
+            className="mx-auto"
+            style={{ width: geometry.width * zoomValue, height: flowHeight * zoomValue }}
+          >
+            <div className="relative w-fit" style={pageStyle}>
+              <EditorContent editor={editor} />
 
-          {Array.from({ length: pageCount - 1 }, (_, index) => (
-            <div
-              // biome-ignore lint/suspicious/noArrayIndexKey: fixed positional page markers
-              key={index}
-              className="pointer-events-none absolute inset-x-0 flex items-center gap-3 px-6"
-              style={{ top: (index + 1) * minHeight }}
-            >
-              <div className="h-px flex-1 bg-black/10" />
-              <span className="text-[11px] font-medium text-black/40">Página {index + 2}</span>
-              <div className="h-px flex-1 bg-black/10" />
+              {images.map((image) => (
+                <FloatingImage
+                  key={image.id}
+                  data={image}
+                  selected={selectedId === image.id}
+                  bounds={{ w: geometry.width, h: flowHeight }}
+                  onSelect={() => setSelectedId(image.id)}
+                  onChange={(patch) => updateImage(image.id, patch)}
+                  onRemove={() => removeImage(image.id)}
+                />
+              ))}
             </div>
-          ))}
+          </div>
+        </div>
 
-          {images.map((image) => (
-            <FloatingImage
-              key={image.id}
-              data={image}
-              selected={selectedId === image.id}
-              bounds={{ w: width, h: sheetHeight }}
-              onSelect={() => setSelectedId(image.id)}
-              onChange={(patch) => updateImage(image.id, patch)}
-              onRemove={() => removeImage(image.id)}
-            />
-          ))}
+        <div className="flex shrink-0 items-center justify-between gap-3 rounded-t-xl border-t bg-card px-4 py-2 text-muted-foreground text-xs">
+          <span>
+            {pageCount} {pageCount === 1 ? 'página' : 'páginas'} · {wordCount}{' '}
+            {wordCount === 1 ? 'palavra' : 'palavras'} · {charCount}{' '}
+            {charCount === 1 ? 'caractere' : 'caracteres'}
+          </span>
+          <div className="flex items-center gap-2">
+            <span>Zoom</span>
+            <Select value={zoom} onValueChange={setZoom}>
+              <SelectTrigger size="sm" className="h-7 w-[104px]" aria-label="Zoom">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ZOOM_LEVELS.map((level) => (
+                  <SelectItem key={level.value} value={level.value}>
+                    {level.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
+
+      {/* Right inspector — the document's metadata, mirroring the left sidebar. */}
+      <aside className="hidden w-72 shrink-0 flex-col border-l bg-sidebar lg:flex">
+        <div className="shrink-0 border-b px-4 py-3">
+          <h2 className="font-display text-sm font-semibold tracking-tight">Detalhes</h2>
+          <p className="text-xs text-muted-foreground">Título, categorias e publicação.</p>
+        </div>
+        <div className="mlp-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4">{detailsPanel}</div>
+        <div className="shrink-0 border-t px-4 py-3">
+          <div className="[&>button]:w-full">{saveButton}</div>
+        </div>
+      </aside>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 export function ResizableImageView({ node, updateAttributes, selected, editor }: NodeViewProps) {
   const resize = useRef<{ px: number; ow: number } | null>(null);
   const width = node.attrs.width as number | null;
+  const aspect = node.attrs.aspect as number | null;
   const editable = editor.isEditable;
 
   function start(event: ReactPointerEvent) {
@@ -31,11 +32,22 @@ export function ResizableImageView({ node, updateAttributes, selected, editor }:
         src={node.attrs.src}
         alt={node.attrs.alt || 'imagem'}
         draggable={false}
-        style={{ width: width ? `${width}px` : undefined }}
+        style={{
+          width: width ? `${width}px` : undefined,
+          // Reserve height from the aspect ratio so the layout box is correct
+          // immediately — pagination reflows to the right size on insert.
+          aspectRatio: aspect ? String(aspect) : undefined,
+        }}
         className={cn(
           'inline-block max-w-full rounded-md align-bottom',
           selected && editable && 'outline-2 outline-primary',
         )}
+        onLoad={() => {
+          // Safety net for images of unknown size (paste / loaded HTML): nudge an
+          // empty transaction so pagination recomputes once the real height lands.
+          if (editor.isDestroyed) return;
+          editor.view.dispatch(editor.state.tr.setMeta('addToHistory', false));
+        }}
       />
       {selected && editable ? (
         <span
