@@ -8,11 +8,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="bg-background">
+      <SidebarInset className="min-w-0 bg-background">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
         </header>
-        <main className="flex-1 p-6 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
       </SidebarInset>
       <CommandMenu />
       <UserPanel />

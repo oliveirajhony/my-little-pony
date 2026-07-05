@@ -11,6 +11,15 @@
   background: var(--editor-desk);
 }
 
+/* On small screens the toolbar scrolls horizontally instead of wrapping tall;
+   hide the scrollbar so it reads as a clean strip. */
+.editor-toolbar-scroll {
+  scrollbar-width: none;
+}
+.editor-toolbar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* Real A4 pages (tiptap-pagination-plus). The `.rm-with-pagination` element is the
    page-width sheet; the gaps between pages are punched through it. */
 .rm-with-pagination {
