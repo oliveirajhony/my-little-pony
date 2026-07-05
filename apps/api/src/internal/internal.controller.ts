@@ -1,6 +1,7 @@
 import type { DocumentRepository } from '@my-little-pony/core';
 import { Controller, Get, Inject, NotFoundException, Param, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { DOCUMENT_REPOSITORY } from '../tokens';
 import { InternalTokenGuard } from './internal-token.guard';
 
@@ -22,6 +23,7 @@ export class DocumentContentResponse {
 }
 
 @ApiTags('internal')
+@SkipThrottle()
 @ApiHeader({ name: 'X-Internal-Token', description: 'Token de serviço (INTERNAL_API_TOKEN)' })
 @Controller('internal/documents')
 @UseGuards(InternalTokenGuard)

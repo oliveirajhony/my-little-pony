@@ -1,6 +1,7 @@
 import { GetPublicDocument } from '@my-little-pony/core';
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 export class PublicDocumentResponse {
   @ApiProperty()
@@ -26,6 +27,7 @@ export class PublicDocumentResponse {
 }
 
 @ApiTags('public')
+@Throttle({ default: { limit: 60, ttl: 60_000 } })
 @Controller('public/documents')
 export class PublicController {
   constructor(private readonly getPublicDocument: GetPublicDocument) {}

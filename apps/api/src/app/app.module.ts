@@ -10,6 +10,7 @@ import { InternalModule } from '../internal/internal.module';
 import { MessagingModule } from '../messaging/messaging.module';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { PublicModule } from '../public/public.module';
+import { RateLimitModule } from '../rate-limit/rate-limit.module';
 import { RedisModule } from '../redis/redis.module';
 import { SearchModule } from '../search/search.module';
 import { UsersModule } from '../users/users.module';
@@ -19,6 +20,7 @@ import { UsersModule } from '../users/users.module';
     ConfigModule,
     PersistenceModule,
     RedisModule,
+    RateLimitModule,
     MessagingModule,
     SecurityModule,
     AuthModule,

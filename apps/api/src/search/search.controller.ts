@@ -1,6 +1,7 @@
 import { SearchDocuments } from '@my-little-pony/core';
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AccessTokenGuard, type AuthUser, CurrentUser } from '../auth/access-token.guard';
 
 export class SearchResultResponse {
@@ -21,6 +22,7 @@ export class SearchResultResponse {
 }
 
 @ApiTags('search')
+@Throttle({ default: { limit: 20, ttl: 60_000 } })
 @ApiBearerAuth()
 @Controller('search')
 @UseGuards(AccessTokenGuard)
