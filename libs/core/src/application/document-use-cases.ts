@@ -260,11 +260,23 @@ export class GetDocumentPdf {
   }
 }
 
+/** Escapa texto para uso seguro em HTML (o título é conteúdo do usuário). */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function pdfEmailHtml(title: string, downloadUrl: string): string {
+  const safeTitle = escapeHtml(title);
+  const safeUrl = encodeURI(downloadUrl);
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.5">
-  <p>Você pediu uma cópia do documento <strong>${title}</strong>.</p>
-  <p><a href="${downloadUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Baixar o PDF</a></p>
-  <p style="color:#6b7280;font-size:13px">Ou copie o link: ${downloadUrl}</p>
+  <p>Você pediu uma cópia do documento <strong>${safeTitle}</strong>.</p>
+  <p><a href="${safeUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Baixar o PDF</a></p>
+  <p style="color:#6b7280;font-size:13px">Ou copie o link: ${escapeHtml(downloadUrl)}</p>
 </div>`;
 }
 
