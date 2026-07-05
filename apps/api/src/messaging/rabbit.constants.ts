@@ -8,3 +8,7 @@ export const INDEX_COMPLETED_QUEUE = 'mlp.index.completed';
 // PDF generation: emitted on publish, consumed by the API's own worker.
 export const RK_PDF_REQUESTED = 'document.pdf.requested';
 export const PDF_REQUESTED_QUEUE = 'mlp.pdf.requested';
+
+// "Receber por e-mail": emitted by the public endpoint, consumed by the API.
+export const RK_PDF_EMAIL_REQUESTED = 'document.pdf.email.requested';
+export const PDF_EMAIL_QUEUE = 'mlp.pdf.email';

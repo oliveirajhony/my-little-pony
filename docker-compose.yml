@@ -56,6 +56,13 @@ services:
       timeout: 3s
       retries: 10
 
+  # Catcher de e-mails para dev: recebe via SMTP (1025) e mostra na UI (8025).
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   mlp_pg:
   mlp_minio:

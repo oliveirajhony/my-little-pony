@@ -40,10 +40,19 @@ export type DocumentIndexRequested = { documentId: string; ownerId: string; vers
 /** Emitted when a published document needs its PDF (re)generated. */
 export type DocumentPdfRequested = { documentId: string; ownerId: string };
 
+/** Emitted when someone asks to receive a published document's PDF by e-mail. */
+export type DocumentPdfEmailRequested = { ownerId: string; slug: string; recipient: string };
+
 /** Outbound port to the message broker (RabbitMQ adapter). */
 export interface EventPublisher {
   documentIndexRequested(event: DocumentIndexRequested): Promise<void>;
   documentPdfRequested(event: DocumentPdfRequested): Promise<void>;
+  documentPdfEmailRequested(event: DocumentPdfEmailRequested): Promise<void>;
+}
+
+/** Sends transactional e-mail (SMTP/nodemailer adapter). */
+export interface EmailSender {
+  send(input: { to: string; subject: string; html: string; text?: string }): Promise<void>;
 }
 
 /** Key/value cache with TTL (Redis adapter). */

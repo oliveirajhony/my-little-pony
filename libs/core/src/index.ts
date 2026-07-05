@@ -28,6 +28,7 @@ export {
   PublishDocument,
   publicDocumentKey,
   SaveDraft,
+  SendDocumentPdfEmail,
   UnpublishDocument,
 } from './application/document-use-cases.js';
 export type {
@@ -36,10 +37,12 @@ export type {
   Clock,
   DocumentIndexRequested,
   DocumentPage,
+  DocumentPdfEmailRequested,
   DocumentPdfRequested,
   DocumentPdfStorage,
   DocumentQuery,
   DocumentRepository,
+  EmailSender,
   EventPublisher,
   IdGenerator,
   PasswordHasher,

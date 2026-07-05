@@ -26,6 +26,13 @@ export const EnvSchema = z.object({
   MINIO_BUCKET: z.string().default('avatars'),
   // Python search/indexing service base URL. Empty until Spec 2 is deployed.
   SEARCH_SERVICE_URL: z.string().default(''),
+  // SMTP para envio de e-mail (dev: Mailpit em localhost:1025, sem auth).
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().default(1025),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  MAIL_FROM: z.string().default('my-little-pony <no-reply@mlp.local>'),
 });
 
 export type AppConfig = {
@@ -46,6 +53,12 @@ export type AppConfig = {
   minioSecretKey: string;
   minioBucket: string;
   searchServiceUrl: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass: string;
+  mailFrom: string;
 };
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -76,5 +89,11 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     minioSecretKey: env_.MINIO_SECRET_KEY,
     minioBucket: env_.MINIO_BUCKET,
     searchServiceUrl: env_.SEARCH_SERVICE_URL,
+    smtpHost: env_.SMTP_HOST,
+    smtpPort: env_.SMTP_PORT,
+    smtpSecure: env_.SMTP_SECURE,
+    smtpUser: env_.SMTP_USER,
+    smtpPass: env_.SMTP_PASS,
+    mailFrom: env_.MAIL_FROM,
   };
 }
