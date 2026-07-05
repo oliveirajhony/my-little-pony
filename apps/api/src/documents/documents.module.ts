@@ -3,6 +3,7 @@ import {
   CreateDocument,
   DeleteDocument,
   type DocumentRepository,
+  type EventPublisher,
   GetDocument,
   type IdGenerator,
   ListDocuments,
@@ -11,7 +12,7 @@ import {
   UnpublishDocument,
 } from '@my-little-pony/core';
 import { Module } from '@nestjs/common';
-import { CLOCK, DOCUMENT_REPOSITORY, ID_GENERATOR } from '../tokens';
+import { CLOCK, DOCUMENT_REPOSITORY, EVENT_PUBLISHER, ID_GENERATOR } from '../tokens';
 import { DocumentsController } from './documents.controller';
 
 @Module({
@@ -45,8 +46,9 @@ import { DocumentsController } from './documents.controller';
     },
     {
       provide: PublishDocument,
-      inject: [DOCUMENT_REPOSITORY, CLOCK],
-      useFactory: (repo: DocumentRepository, clock: Clock) => new PublishDocument(repo, clock),
+      inject: [DOCUMENT_REPOSITORY, CLOCK, EVENT_PUBLISHER],
+      useFactory: (repo: DocumentRepository, clock: Clock, events: EventPublisher) =>
+        new PublishDocument(repo, clock, events),
     },
     {
       provide: UnpublishDocument,

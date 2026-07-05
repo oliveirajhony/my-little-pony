@@ -1,10 +1,11 @@
-import { Document } from '../domain/document.js';
+import { Document, type IndexStatus } from '../domain/document.js';
 import { DomainError } from '../domain/errors.js';
 import type {
   Clock,
   DocumentPage,
   DocumentQuery,
   DocumentRepository,
+  EventPublisher,
   IdGenerator,
 } from './ports.js';
 
@@ -96,6 +97,7 @@ export class PublishDocument {
   constructor(
     private readonly repo: DocumentRepository,
     private readonly clock: Clock,
+    private readonly events: EventPublisher,
   ) {}
 
   async execute(input: { id: string; ownerId: string }): Promise<Document> {
@@ -103,6 +105,12 @@ export class PublishDocument {
     await this.ensureUniqueSlug(doc);
     doc.publish(this.clock.now());
     await this.repo.save(doc);
+    // Ask the indexing pipeline to (re)index this document.
+    await this.events.documentIndexRequested({
+      documentId: doc.id,
+      ownerId: doc.ownerId,
+      version: doc.version,
+    });
     return doc;
   }
 
@@ -132,5 +140,23 @@ export class UnpublishDocument {
     doc.unpublish(this.clock.now());
     await this.repo.save(doc);
     return doc;
+  }
+}
+
+/**
+ * Applies the indexing pipeline's result (from the queue). System-level: no
+ * owner check. A document deleted meanwhile is silently ignored.
+ */
+export class MarkDocumentIndexed {
+  constructor(
+    private readonly repo: DocumentRepository,
+    private readonly clock: Clock,
+  ) {}
+
+  async execute(input: { documentId: string; status: IndexStatus }): Promise<void> {
+    const doc = await this.repo.findById(input.documentId);
+    if (!doc) return;
+    doc.setIndexStatus(input.status, this.clock.now());
+    await this.repo.save(doc);
   }
 }

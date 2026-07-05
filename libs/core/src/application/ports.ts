@@ -34,6 +34,14 @@ export interface DocumentRepository {
   findPublishedBySlug(slug: string): Promise<Document | null>;
 }
 
+/** Emitted when a published document needs (re)indexing by the Python service. */
+export type DocumentIndexRequested = { documentId: string; ownerId: string; version: number };
+
+/** Outbound port to the message broker (RabbitMQ adapter). */
+export interface EventPublisher {
+  documentIndexRequested(event: DocumentIndexRequested): Promise<void>;
+}
+
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */
 export interface RefreshTokenStore {
   /** Persist a token for a user with a TTL; returns nothing. */

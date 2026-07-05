@@ -15,15 +15,18 @@ export {
   DeleteDocument,
   GetDocument,
   ListDocuments,
+  MarkDocumentIndexed,
   PublishDocument,
   SaveDraft,
   UnpublishDocument,
 } from './application/document-use-cases.js';
 export type {
   Clock,
+  DocumentIndexRequested,
   DocumentPage,
   DocumentQuery,
   DocumentRepository,
+  EventPublisher,
   IdGenerator,
   PasswordHasher,
   RefreshTokenStore,

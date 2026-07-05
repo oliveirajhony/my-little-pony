@@ -3,6 +3,7 @@ import {
   CreateDocument,
   DeleteDocument,
   GetDocument,
+  MarkDocumentIndexed,
   PublishDocument,
   SaveDraft,
   UnpublishDocument,
@@ -12,12 +13,23 @@ import type {
   DocumentPage,
   DocumentQuery,
   DocumentRepository,
+  EventPublisher,
   IdGenerator,
 } from './ports.js';
 
 const clock: Clock = { now: () => new Date('2026-07-05T00:00:00.000Z') };
 let seq = 0;
 const ids: IdGenerator = { next: () => `d${++seq}` };
+
+function makeEvents() {
+  const published: string[] = [];
+  const events: EventPublisher = {
+    documentIndexRequested: async (e) => {
+      published.push(e.documentId);
+    },
+  };
+  return { events, published };
+}
 
 class FakeDocs implements DocumentRepository {
   byId = new Map<string, Document>();
@@ -98,8 +110,14 @@ describe('document use cases', () => {
     const repo = new FakeDocs();
     const a = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1', title: 'Guia' });
     const b = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u2', title: 'Guia' });
-    const publishedA = await new PublishDocument(repo, clock).execute({ id: a.id, ownerId: 'u1' });
-    const publishedB = await new PublishDocument(repo, clock).execute({ id: b.id, ownerId: 'u2' });
+    const publishedA = await new PublishDocument(repo, clock, makeEvents().events).execute({
+      id: a.id,
+      ownerId: 'u1',
+    });
+    const publishedB = await new PublishDocument(repo, clock, makeEvents().events).execute({
+      id: b.id,
+      ownerId: 'u2',
+    });
     expect(publishedA.slug).toBe('guia');
     expect(publishedB.slug).toBe('guia-2');
   });
@@ -107,8 +125,32 @@ describe('document use cases', () => {
   it('unpublishes back to draft', async () => {
     const repo = new FakeDocs();
     const doc = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1' });
-    await new PublishDocument(repo, clock).execute({ id: doc.id, ownerId: 'u1' });
+    await new PublishDocument(repo, clock, makeEvents().events).execute({
+      id: doc.id,
+      ownerId: 'u1',
+    });
     const back = await new UnpublishDocument(repo, clock).execute({ id: doc.id, ownerId: 'u1' });
     expect(back.status).toBe('draft');
+  });
+  it('emits an index-requested event on publish', async () => {
+    const repo = new FakeDocs();
+    const { events, published } = makeEvents();
+    const doc = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1' });
+    await new PublishDocument(repo, clock, events).execute({ id: doc.id, ownerId: 'u1' });
+    expect(published).toEqual([doc.id]);
+  });
+
+  it('applies an indexing result via MarkDocumentIndexed', async () => {
+    const repo = new FakeDocs();
+    const doc = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1' });
+    await new MarkDocumentIndexed(repo, clock).execute({ documentId: doc.id, status: 'ready' });
+    expect((await repo.findById(doc.id))?.indexStatus).toBe('ready');
+  });
+
+  it('ignores an indexing result for a missing document', async () => {
+    const repo = new FakeDocs();
+    await expect(
+      new MarkDocumentIndexed(repo, clock).execute({ documentId: 'ghost', status: 'ready' }),
+    ).resolves.toBeUndefined();
   });
 });

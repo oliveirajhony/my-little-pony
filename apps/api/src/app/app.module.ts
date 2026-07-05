@@ -6,6 +6,8 @@ import { ConfigModule } from '../config/config.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { HealthController } from '../health/health.controller';
 import { DomainExceptionFilter } from '../http/domain-exception.filter';
+import { InternalModule } from '../internal/internal.module';
+import { MessagingModule } from '../messaging/messaging.module';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { RedisModule } from '../redis/redis.module';
 import { UsersModule } from '../users/users.module';
@@ -15,10 +17,12 @@ import { UsersModule } from '../users/users.module';
     ConfigModule,
     PersistenceModule,
     RedisModule,
+    MessagingModule,
     SecurityModule,
     AuthModule,
     UsersModule,
     DocumentsModule,
+    InternalModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_FILTER, useClass: DomainExceptionFilter }],
