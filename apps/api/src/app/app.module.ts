@@ -11,6 +11,7 @@ import { MessagingModule } from '../messaging/messaging.module';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { PublicModule } from '../public/public.module';
 import { RedisModule } from '../redis/redis.module';
+import { SearchModule } from '../search/search.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
     DocumentsModule,
     PublicModule,
+    SearchModule,
     InternalModule,
   ],
   controllers: [HealthController],

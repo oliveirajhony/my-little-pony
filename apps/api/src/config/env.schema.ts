@@ -16,6 +16,8 @@ export const EnvSchema = z.object({
   JWT_REFRESH_TTL: z.string().default('7d'),
   // Allowed browser origin for CORS (the web app). Not a secret.
   WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
+  // Python search/indexing service base URL. Empty until Spec 2 is deployed.
+  SEARCH_SERVICE_URL: z.string().default(''),
 });
 
 export type AppConfig = {
@@ -29,6 +31,7 @@ export type AppConfig = {
   jwtAccessTtl: string;
   jwtRefreshTtl: string;
   webOrigin: string;
+  searchServiceUrl: string;
 };
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -52,5 +55,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     jwtAccessTtl: env_.JWT_ACCESS_TTL,
     jwtRefreshTtl: env_.JWT_REFRESH_TTL,
     webOrigin: env_.WEB_ORIGIN,
+    searchServiceUrl: env_.SEARCH_SERVICE_URL,
   };
 }

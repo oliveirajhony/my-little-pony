@@ -34,6 +34,8 @@ export type {
   IdGenerator,
   PasswordHasher,
   RefreshTokenStore,
+  SearchGateway,
+  SearchHit,
   TokenService,
   UserRepository,
 } from './application/ports.js';
@@ -42,6 +44,10 @@ export {
   GetProfile,
   UpdateProfile,
 } from './application/profile-use-cases.js';
+export {
+  SearchDocuments,
+  type SearchResultItem,
+} from './application/search-use-cases.js';
 export {
   Document,
   type DocumentProps,

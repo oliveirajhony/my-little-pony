@@ -49,6 +49,14 @@ export interface CacheStore {
   delete(key: string): Promise<void>;
 }
 
+/** A single hit from the semantic/hybrid search service (Python, Spec 2). */
+export type SearchHit = { documentId: string; score: number; snippet: string };
+
+/** Outbound port to the search service. The HTTP adapter proxies to Python. */
+export interface SearchGateway {
+  search(input: { ownerId: string; q: string }): Promise<SearchHit[]>;
+}
+
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */
 export interface RefreshTokenStore {
   /** Persist a token for a user with a TTL; returns nothing. */
