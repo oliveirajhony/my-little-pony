@@ -52,12 +52,40 @@ describe('profile use cases', () => {
   it('updates name and email', async () => {
     const users = new FakeUsers();
     seedUser(users);
-    const updated = await new UpdateProfile(users, clock).execute('u1', {
+    const updated = await new UpdateProfile(users, hasher, clock).execute('u1', {
       name: 'Jhony',
       email: 'New@Mail.com',
+      currentPassword: 'current-pass',
     });
     expect(updated.name).toBe('Jhony');
     expect(updated.email).toBe('new@mail.com');
+  });
+
+  it('updates the name without a password (no email change)', async () => {
+    const users = new FakeUsers();
+    seedUser(users);
+    const updated = await new UpdateProfile(users, hasher, clock).execute('u1', { name: 'Jhony' });
+    expect(updated.name).toBe('Jhony');
+    expect(updated.email).toBe('a@b.co');
+  });
+
+  it('requires the current password to change the email', async () => {
+    const users = new FakeUsers();
+    seedUser(users);
+    await expect(
+      new UpdateProfile(users, hasher, clock).execute('u1', { email: 'new@mail.com' }),
+    ).rejects.toThrow(/bad-credentials/);
+  });
+
+  it('rejects an email change when the current password is wrong', async () => {
+    const users = new FakeUsers();
+    seedUser(users);
+    await expect(
+      new UpdateProfile(users, hasher, clock).execute('u1', {
+        email: 'new@mail.com',
+        currentPassword: 'wrong',
+      }),
+    ).rejects.toThrow(/bad-credentials/);
   });
 
   it('rejects changing to an email owned by someone else', async () => {
@@ -65,7 +93,10 @@ describe('profile use cases', () => {
     seedUser(users, 'u1', 'a@b.co');
     seedUser(users, 'u2', 'taken@b.co');
     await expect(
-      new UpdateProfile(users, clock).execute('u1', { email: 'taken@b.co' }),
+      new UpdateProfile(users, hasher, clock).execute('u1', {
+        email: 'taken@b.co',
+        currentPassword: 'current-pass',
+      }),
     ).rejects.toThrow(/email-taken/);
   });
 

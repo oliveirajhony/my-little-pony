@@ -31,8 +31,9 @@ import { UsersController } from './users.controller';
     },
     {
       provide: UpdateProfile,
-      inject: [USER_REPOSITORY, CLOCK],
-      useFactory: (users: UserRepository, clock: Clock) => new UpdateProfile(users, clock),
+      inject: [USER_REPOSITORY, PASSWORD_HASHER, CLOCK],
+      useFactory: (users: UserRepository, hasher: PasswordHasher, clock: Clock) =>
+        new UpdateProfile(users, hasher, clock),
     },
     {
       provide: ChangePassword,
