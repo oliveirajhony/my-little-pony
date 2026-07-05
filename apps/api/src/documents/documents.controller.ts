@@ -16,7 +16,9 @@ import {
   Get,
   HttpCode,
   Inject,
+  NotFoundException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -42,6 +44,10 @@ import { CreateDocumentDto, ListDocumentsDto, SaveDraftDto } from './documents.d
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
+
+// Malformed ids can't exist: fail like "not found" (not the 500 a raw uuid
+// cast in Postgres would throw). Mirrors PublicController.
+const IdParam = new ParseUUIDPipe({ exceptionFactory: () => new NotFoundException() });
 
 @ApiTags('documents')
 @ApiBearerAuth()
@@ -97,14 +103,18 @@ export class DocumentsController {
   @Get(':id')
   @ApiOperation({ summary: 'Documento completo (com conteúdo)' })
   @ApiOkResponse({ type: DocumentDetailResponse })
-  async get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  async get(@CurrentUser() user: AuthUser, @Param('id', IdParam) id: string) {
     return toDocumentDetail(await this.getDocument.execute({ id, ownerId: user.id }));
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Autosave (concorrência otimista por versão)' })
   @ApiOkResponse({ type: DocumentDetailResponse })
-  async save(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SaveDraftDto) {
+  async save(
+    @CurrentUser() user: AuthUser,
+    @Param('id', IdParam) id: string,
+    @Body() dto: SaveDraftDto,
+  ) {
     const detail = toDocumentDetail(
       await this.saveDraft.execute({
         id,
@@ -125,7 +135,7 @@ export class DocumentsController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Publica (gera slug único e marca para indexação)' })
   @ApiOkResponse({ type: DocumentSummaryResponse })
-  async publish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  async publish(@CurrentUser() user: AuthUser, @Param('id', IdParam) id: string) {
     const summary = toDocumentSummary(await this.publishDocument.execute({ id, ownerId: user.id }));
     await this.invalidatePublic(user.id, summary.slug);
     return summary;
@@ -135,7 +145,7 @@ export class DocumentsController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Despublica (volta a rascunho)' })
   @ApiOkResponse({ type: DocumentSummaryResponse })
-  async unpublish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  async unpublish(@CurrentUser() user: AuthUser, @Param('id', IdParam) id: string) {
     const summary = toDocumentSummary(
       await this.unpublishDocument.execute({ id, ownerId: user.id }),
     );
@@ -147,7 +157,7 @@ export class DocumentsController {
   @HttpCode(204)
   @ApiOperation({ summary: 'Remove o documento' })
   @ApiNoContentResponse()
-  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+  async remove(@CurrentUser() user: AuthUser, @Param('id', IdParam) id: string) {
     await this.deleteDocument.execute({ id, ownerId: user.id });
   }
 }
