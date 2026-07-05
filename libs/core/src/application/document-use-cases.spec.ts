@@ -2,7 +2,9 @@ import type { Document } from '../domain/document.js';
 import {
   CreateDocument,
   DeleteDocument,
+  GenerateDocumentPdf,
   GetDocument,
+  GetDocumentPdf,
   GetPublicDocument,
   MarkDocumentIndexed,
   PublishDocument,
@@ -13,10 +15,12 @@ import type {
   CacheStore,
   Clock,
   DocumentPage,
+  DocumentPdfStorage,
   DocumentQuery,
   DocumentRepository,
   EventPublisher,
   IdGenerator,
+  PdfRenderer,
 } from './ports.js';
 
 class FakeCache implements CacheStore {
@@ -41,12 +45,16 @@ const ids: IdGenerator = { next: () => `d${++seq}` };
 
 function makeEvents() {
   const published: string[] = [];
+  const pdfRequested: string[] = [];
   const events: EventPublisher = {
     documentIndexRequested: async (e) => {
       published.push(e.documentId);
     },
+    documentPdfRequested: async (e) => {
+      pdfRequested.push(e.documentId);
+    },
   };
-  return { events, published };
+  return { events, published, pdfRequested };
 }
 
 class FakeDocs implements DocumentRepository {
@@ -212,5 +220,48 @@ describe('document use cases', () => {
     await expect(new GetPublicDocument(repo, cache, 60).execute('u1', 'rascunho')).rejects.toThrow(
       /document-not-found/,
     );
+  });
+
+  it('requests a PDF on publish', async () => {
+    const repo = new FakeDocs();
+    const doc = await new CreateDocument(repo, ids, clock).execute({ ownerId: 'u1', title: 'Doc' });
+    const { events, pdfRequested } = makeEvents();
+    await new PublishDocument(repo, clock, events).execute({ id: doc.id, ownerId: 'u1' });
+    expect(pdfRequested).toEqual([doc.id]);
+  });
+
+  it('generates the PDF for a published doc and serves it by owner + slug', async () => {
+    const repo = new FakeDocs();
+    const pdfStore = new Map<string, Uint8Array>();
+    const storage: DocumentPdfStorage = {
+      put: async ({ ownerId, documentId, data }) => {
+        pdfStore.set(`${ownerId}:${documentId}`, data);
+      },
+      get: async ({ ownerId, documentId }) => pdfStore.get(`${ownerId}:${documentId}`) ?? null,
+      remove: async ({ ownerId, documentId }) => {
+        pdfStore.delete(`${ownerId}:${documentId}`);
+      },
+    };
+    const renderer: PdfRenderer = { render: async () => new Uint8Array([37, 80, 68, 70]) };
+
+    const doc = await new CreateDocument(repo, ids, clock).execute({
+      ownerId: 'u1',
+      title: 'Publico',
+    });
+    // Draft → generation is skipped, nothing is stored.
+    await new GenerateDocumentPdf(repo, renderer, storage).execute({ documentId: doc.id });
+    expect(pdfStore.size).toBe(0);
+
+    await new PublishDocument(repo, clock, makeEvents().events).execute({
+      id: doc.id,
+      ownerId: 'u1',
+    });
+    // Published but not generated yet → download returns null.
+    expect(await new GetDocumentPdf(repo, storage).execute('u1', 'publico')).toBeNull();
+
+    await new GenerateDocumentPdf(repo, renderer, storage).execute({ documentId: doc.id });
+    const pdf = await new GetDocumentPdf(repo, storage).execute('u1', 'publico');
+    expect(pdf?.title).toBe('Publico');
+    expect(pdf?.data).toEqual(new Uint8Array([37, 80, 68, 70]));
   });
 });

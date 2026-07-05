@@ -10,3 +10,5 @@ export const REFRESH_TOKEN_STORE = Symbol('RefreshTokenStore');
 export const ID_GENERATOR = Symbol('IdGenerator');
 export const CLOCK = Symbol('Clock');
 export const AVATAR_STORAGE = Symbol('AvatarStorage');
+export const PDF_RENDERER = Symbol('PdfRenderer');
+export const DOCUMENT_PDF_STORAGE = Symbol('DocumentPdfStorage');

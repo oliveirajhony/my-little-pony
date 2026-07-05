@@ -19,7 +19,7 @@ const REPO_URL = 'https://github.com/oliveirajhony/my-little-pony';
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.5;
 
-export function PublishedDoc({ doc }: { doc: PublicDoc }) {
+export function PublishedDoc({ doc, ownerId }: { doc: PublicDoc; ownerId: string }) {
   const [zoom, setZoom] = useState(0.85);
   const [fullscreen, setFullscreen] = useState(false);
   const content = doc.content || `<p>${doc.excerpt}</p>`;
@@ -61,7 +61,11 @@ export function PublishedDoc({ doc }: { doc: PublicDoc }) {
               </time>
             </p>
             <div className="mt-6 flex justify-center">
-              <DocActions onFullscreen={() => setFullscreen(true)} />
+              <DocActions
+                ownerId={ownerId}
+                slug={doc.slug}
+                onFullscreen={() => setFullscreen(true)}
+              />
             </div>
           </Reveal>
         </section>
