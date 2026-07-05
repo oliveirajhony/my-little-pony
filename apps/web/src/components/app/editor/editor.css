@@ -36,7 +36,8 @@
 .tiptap {
   outline: none;
   font-family: var(--font-body);
-  color: #1d1d1f;
+  /* Follows the page color so text stays legible on dark pages too. */
+  color: var(--page-fg, #1d1d1f);
   font-size: 16px;
   line-height: 1.6;
 }
