@@ -39,15 +39,18 @@ export function DocumentReader({ content, zoom = 1, onPageCount }: Props) {
 
   const pageStyle = {
     transform: `scale(${zoom})`,
-    transformOrigin: 'top center',
+    transformOrigin: 'top left',
   } as CSSProperties;
 
   return (
+    // O footprint tem exatamente a largura escalada e é centralizado (mx-auto);
+    // o conteúdo (w-fit) é escalado a partir do canto e preenche o footprint, o
+    // que mantém o documento centralizado em qualquer zoom (igual ao editor).
     <div
       className="mlp-doc-footprint mx-auto"
       style={{ width: DEFAULT_GEOMETRY.width * zoom, height: flowHeight * zoom }}
     >
-      <div className="mlp-doc-pages w-full" style={pageStyle}>
+      <div className="mlp-doc-pages w-fit" style={pageStyle}>
         <EditorContent editor={editor} />
       </div>
     </div>
