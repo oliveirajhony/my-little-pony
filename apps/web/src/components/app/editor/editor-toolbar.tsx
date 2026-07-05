@@ -17,9 +17,6 @@ import {
   ListOrdered,
   Minus,
   Move,
-  PaintBucket,
-  RectangleHorizontal,
-  RectangleVertical,
   Redo2,
   Strikethrough,
   Underline as UnderlineIcon,
@@ -45,15 +42,16 @@ import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ImageMode, Orientation } from './document-editor';
+import type { ImageMode } from './document-editor';
 import { FontPicker } from './font-picker';
+import type { PageConfig } from './page-config';
+import { PageSetupDialog } from './page-setup-dialog';
 
 type Props = {
   editor: Editor | null;
-  orientation: Orientation;
-  onOrientationChange: (value: Orientation) => void;
+  pageConfig: PageConfig;
+  onPageConfigChange: (config: PageConfig) => void;
   onInsertImage: (src: string, mode: ImageMode) => void;
-  onPageBgChange: (value: string) => void;
 };
 
 const SIZES = ['12px', '14px', '16px', '18px', '24px', '30px', '36px', '48px'];
@@ -68,7 +66,6 @@ const TEXT_COLORS = [
   '#db2777',
 ];
 const HIGHLIGHTS = ['#fff3bf', '#d3f9d8', '#d0ebff', '#ffd8a8', '#ffc9c9', '#e5dbff'];
-const PAGE_BGS = ['#ffffff', '#fbfbfd', '#f7f5ef', '#eef3fb', '#f4f0fb', '#1d1d1f'];
 
 function Hint({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -134,13 +131,7 @@ function ColorPopover({
   );
 }
 
-export function EditorToolbar({
-  editor,
-  orientation,
-  onOrientationChange,
-  onInsertImage,
-  onPageBgChange,
-}: Props) {
+export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsertImage }: Props) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => {
@@ -386,31 +377,7 @@ export function EditorToolbar({
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <ToggleGroup
-        type="single"
-        size="sm"
-        value={orientation}
-        onValueChange={(value) => value && onOrientationChange(value as Orientation)}
-      >
-        <Hint label="Retrato">
-          <ToggleGroupItem value="portrait" aria-label="Retrato">
-            <RectangleVertical />
-          </ToggleGroupItem>
-        </Hint>
-        <Hint label="Paisagem">
-          <ToggleGroupItem value="landscape" aria-label="Paisagem">
-            <RectangleHorizontal />
-          </ToggleGroupItem>
-        </Hint>
-      </ToggleGroup>
-
-      <ColorPopover icon={<PaintBucket />} label="Cor da página">
-        <Swatches
-          colors={PAGE_BGS}
-          onPick={onPageBgChange}
-          onReset={() => onPageBgChange('#ffffff')}
-        />
-      </ColorPopover>
+      <PageSetupDialog config={pageConfig} onChange={onPageConfigChange} />
     </div>
   );
 }

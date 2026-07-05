@@ -6,36 +6,28 @@ import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-s
 import { Underline } from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
-import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PaginationPlus } from 'tiptap-pagination-plus';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
+import { DEFAULT_GEOMETRY, readableTextColor } from './page-config';
 import { ResizableImage } from './resizable-image';
+import { usePageConfig } from './use-page-config';
 
 export type ImageMode = 'inline' | 'floating';
-
-export type Orientation = 'portrait' | 'landscape';
-
-// A4 at 96dpi.
-const A4_WIDTH = 794;
-const A4_HEIGHT = 1123;
-// Word / Google-Docs default page margin (~1 inch @ 96dpi).
-const PAGE_MARGIN = 96;
 
 const INITIAL_CONTENT = `
   <p><strong><span style="font-size: 30px">Documento sem título</span></strong></p>
   <p>Comece a escrever aqui. Use a barra acima para formatar: fonte, tamanho, cor, alinhamento, listas e mais — e insira imagens para arrastar onde quiser.</p>
 `;
 
-let nextImageId = 0;
-
 export function DocumentEditor() {
-  const [orientation, setOrientation] = useState<Orientation>('portrait');
-  const [pageBg, setPageBg] = useState('#ffffff');
   const [images, setImages] = useState<FloatingImageData[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // Height of the paginated flow — keeps floating images inside the document bounds.
-  const [flowHeight, setFlowHeight] = useState(A4_HEIGHT);
+  const [flowHeight, setFlowHeight] = useState(DEFAULT_GEOMETRY.height);
+  const nextImageId = useRef(0);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -50,18 +42,19 @@ export function DocumentEditor() {
       Highlight.configure({ multicolor: true }),
       ResizableImage.configure({ inline: true, allowBase64: true }),
       // Real A4 pagination: content reflows across pages, like Word / Google Docs.
+      // Size and margins are then driven by usePageConfig (single source of truth).
       PaginationPlus.configure({
-        pageWidth: A4_WIDTH,
-        pageHeight: A4_HEIGHT,
+        pageWidth: DEFAULT_GEOMETRY.width,
+        pageHeight: DEFAULT_GEOMETRY.height,
         pageGap: 28,
         // Gap fill; the theme-aware desk color is enforced via editor.css.
         pageBreakBackground: '#e8eaef',
         pageGapBorderSize: 0,
         pageGapBorderColor: 'transparent',
-        marginTop: PAGE_MARGIN,
-        marginBottom: PAGE_MARGIN,
-        marginLeft: PAGE_MARGIN,
-        marginRight: PAGE_MARGIN,
+        marginTop: DEFAULT_GEOMETRY.margins.top,
+        marginBottom: DEFAULT_GEOMETRY.margins.bottom,
+        marginLeft: DEFAULT_GEOMETRY.margins.left,
+        marginRight: DEFAULT_GEOMETRY.margins.right,
         contentMarginTop: 0,
         contentMarginBottom: 0,
         // Clean pages — no default page numbers / headers / footers.
@@ -77,15 +70,7 @@ export function DocumentEditor() {
     },
   });
 
-  const pageWidth = orientation === 'portrait' ? A4_WIDTH : A4_HEIGHT;
-
-  // Drive the page size from the orientation toggle (portrait ↔ landscape).
-  useEffect(() => {
-    if (!editor) return;
-    const portrait = orientation === 'portrait';
-    editor.commands.updatePageWidth(portrait ? A4_WIDTH : A4_HEIGHT);
-    editor.commands.updatePageHeight(portrait ? A4_HEIGHT : A4_WIDTH);
-  }, [editor, orientation]);
+  const { config, updateConfig, geometry } = usePageConfig(editor);
 
   // Measure the paginated flow so floating images can't be dragged off the document.
   useEffect(() => {
@@ -108,11 +93,12 @@ export function DocumentEditor() {
         editor
           ?.chain()
           .focus()
-          .setImage({ src, width: w, aspect } as { src: string })
+          .insertContent({ type: 'image', attrs: { src, width: w, aspect } })
           .run();
         return;
       }
-      const id = ++nextImageId;
+      nextImageId.current += 1;
+      const id = nextImageId.current;
       setImages((prev) => [...prev, { id, src, x: 120, y: 140, w, aspect }]);
       setSelectedId(id);
     };
@@ -128,14 +114,18 @@ export function DocumentEditor() {
     setSelectedId(null);
   }
 
+  const pageStyle = {
+    '--page-bg': config.pageColor,
+    '--page-fg': readableTextColor(config.pageColor),
+  } as CSSProperties;
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <EditorToolbar
         editor={editor}
-        orientation={orientation}
-        onOrientationChange={setOrientation}
+        pageConfig={config}
+        onPageConfigChange={updateConfig}
         onInsertImage={insertImage}
-        onPageBgChange={setPageBg}
       />
 
       <div
@@ -144,7 +134,7 @@ export function DocumentEditor() {
           if (event.target === event.currentTarget) setSelectedId(null);
         }}
       >
-        <div className="relative mx-auto w-fit" style={{ ['--page-bg' as string]: pageBg }}>
+        <div className="relative mx-auto w-fit" style={pageStyle}>
           <EditorContent editor={editor} />
 
           {images.map((image) => (
@@ -152,7 +142,7 @@ export function DocumentEditor() {
               key={image.id}
               data={image}
               selected={selectedId === image.id}
-              bounds={{ w: pageWidth, h: flowHeight }}
+              bounds={{ w: geometry.width, h: flowHeight }}
               onSelect={() => setSelectedId(image.id)}
               onChange={(patch) => updateImage(image.id, patch)}
               onRemove={() => removeImage(image.id)}
