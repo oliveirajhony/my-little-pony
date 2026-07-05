@@ -114,21 +114,27 @@
   }
 }
 
-/* Subtle, theme-aware scrollbar for our custom scroll containers — a slim pill
-   in the muted-foreground tone with a transparent track. Themes automatically
-   because it's built from the design tokens. */
+/* Subtle, theme-aware scrollbar — a slim pill in the muted-foreground tone with
+   a transparent track. Applied to the whole page (html) so the window scrollbar
+   matches the design system everywhere, plus `.mlp-scrollbar` for custom
+   containers. Themes automatically because it's built from the design tokens. */
+html,
 .mlp-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--muted-foreground) 32%, transparent) transparent;
 }
+html::-webkit-scrollbar,
 .mlp-scrollbar::-webkit-scrollbar {
   width: 12px;
   height: 12px;
 }
+html::-webkit-scrollbar-track,
+html::-webkit-scrollbar-corner,
 .mlp-scrollbar::-webkit-scrollbar-track,
 .mlp-scrollbar::-webkit-scrollbar-corner {
   background: transparent;
 }
+html::-webkit-scrollbar-thumb,
 .mlp-scrollbar::-webkit-scrollbar-thumb {
   background-color: color-mix(in oklab, var(--muted-foreground) 32%, transparent);
   border-radius: 9999px;
@@ -136,6 +142,7 @@
   border: 3px solid transparent;
   background-clip: padding-box;
 }
+html::-webkit-scrollbar-thumb:hover,
 .mlp-scrollbar:hover::-webkit-scrollbar-thumb {
   background-color: color-mix(in oklab, var(--muted-foreground) 55%, transparent);
 }
