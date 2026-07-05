@@ -26,6 +26,8 @@ type AuthState = {
     avatarUrl?: string | null;
   }) => Promise<void>;
   changePassword: (input: { current: string; next: string }) => Promise<void>;
+  uploadAvatarFile: (file: File) => Promise<void>;
+  uploadAvatarFromUrl: (url: string) => Promise<void>;
 };
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -94,6 +96,21 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   changePassword: async (input) => {
     await apiFetch('/users/me/password', { method: 'PATCH', body: JSON.stringify(input) });
+  },
+
+  uploadAvatarFile: async (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    const user = await apiFetch<AuthUser>('/users/me/avatar', { method: 'POST', body: form });
+    set({ user });
+  },
+
+  uploadAvatarFromUrl: async (url) => {
+    const user = await apiFetch<AuthUser>('/users/me/avatar/from-url', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    });
+    set({ user });
   },
 }));
 

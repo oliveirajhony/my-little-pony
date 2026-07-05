@@ -5,9 +5,12 @@ import { type FormEvent, useEffect, useId, useState } from 'react';
 import { asApiError } from '../../lib/api-client';
 import { useAuth } from '../../lib/auth-store';
 import { useLoginUi } from '../../lib/login-ui-store';
+import { evaluatePassword } from '../../lib/password-strength';
 import { isValidEmail } from '../../lib/validation';
 import { AlertIcon, CheckIcon, DocIcon, EyeIcon, EyeOffIcon, GitHubIcon } from '../icons';
+import { type AvatarSelection, AvatarUpload } from './avatar-upload';
 import styles from './login-form.module.css';
+import { PasswordStrength } from './password-strength';
 
 const REPO_URL = 'https://github.com/oliveirajhony/my-little-pony';
 const MIN_PASSWORD = 8;
@@ -19,10 +22,13 @@ export function LoginForm() {
   const router = useRouter();
   const login = useAuth((s) => s.login);
   const register = useAuth((s) => s.register);
+  const uploadAvatarFile = useAuth((s) => s.uploadAvatarFile);
+  const uploadAvatarFromUrl = useAuth((s) => s.uploadAvatarFromUrl);
   const authStatus = useAuth((s) => s.status);
 
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
+  const [avatar, setAvatar] = useState<AvatarSelection | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -85,18 +91,35 @@ export function LoginForm() {
       fail('A senha precisa ter ao menos 8 caracteres.');
       return;
     }
+    if (isRegister) {
+      const strength = evaluatePassword(password, name);
+      if (strength.containsName) {
+        fail('Não use seu nome na senha.');
+        return;
+      }
+      if (!strength.valid) {
+        fail('Senha fraca — misture maiúsculas, minúsculas, números e símbolos.');
+        return;
+      }
+    }
 
     setStatus('loading');
     try {
       if (isRegister) {
         await register(name.trim(), email.trim(), password);
+        try {
+          if (avatar?.file) await uploadAvatarFile(avatar.file);
+          else if (avatar?.url) await uploadAvatarFromUrl(avatar.url);
+        } catch {
+          // Avatar é opcional — uma falha aqui não bloqueia o cadastro.
+        }
       } else {
         await login(email.trim(), password);
       }
       setStatus('success');
       triggerReaction('success');
-      // Deixa a comemoração do pônei aparecer antes de navegar.
-      setTimeout(() => router.replace('/app'), 700);
+      // Espera a comemoração do pônei terminar antes de navegar.
+      setTimeout(() => router.replace('/app'), 1600);
     } catch (err) {
       setStatus('idle');
       fail(asApiError(err)?.message ?? 'Não foi possível conectar. Tente de novo.');
@@ -128,6 +151,12 @@ export function LoginForm() {
           ? 'Leva menos de um minuto — comece a escrever e publicar seus documentos.'
           : 'Entre para acessar seus rascunhos e documentos publicados — e continuar de onde parou.'}
       </p>
+
+      {isRegister && (
+        <div className={styles.field}>
+          <AvatarUpload value={avatar} onChange={setAvatar} disabled={locked} />
+        </div>
+      )}
 
       {isRegister && (
         <div className={styles.field}>
@@ -193,6 +222,8 @@ export function LoginForm() {
           </button>
         </div>
       </div>
+
+      {isRegister && <PasswordStrength password={password} name={name} />}
 
       {!isRegister && (
         <div className={styles.row}>

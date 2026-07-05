@@ -2,7 +2,7 @@
 
 import { Check } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,6 +46,7 @@ export function ProfileForm() {
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="flex items-center gap-4">
         <Avatar className="size-16 text-lg">
+          {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
           <AvatarFallback>{initialsOf(name)}</AvatarFallback>
         </Avatar>
       </div>
