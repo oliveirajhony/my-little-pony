@@ -1,5 +1,14 @@
 // Domain + application layers (framework-free). Consumed by apps/api adapters.
 
+export {
+  AuthenticateUser,
+  type AuthResult,
+  type AuthTokens,
+  Logout,
+  RefreshSession,
+  RegisterUser,
+  SessionIssuer,
+} from './application/auth-use-cases.js';
 export type {
   Clock,
   IdGenerator,
