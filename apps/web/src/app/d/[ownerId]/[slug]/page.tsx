@@ -15,5 +15,5 @@ export default async function PublishedDocPage({
   const { ownerId, slug } = await params;
   const doc = await getPublicDocument(ownerId, slug);
   if (!doc) notFound();
-  return <PublishedDoc doc={doc} />;
+  return <PublishedDoc doc={doc} ownerId={ownerId} />;
 }

@@ -37,9 +37,13 @@ export interface DocumentRepository {
 /** Emitted when a published document needs (re)indexing by the Python service. */
 export type DocumentIndexRequested = { documentId: string; ownerId: string; version: number };
 
+/** Emitted when a published document needs its PDF (re)generated. */
+export type DocumentPdfRequested = { documentId: string; ownerId: string };
+
 /** Outbound port to the message broker (RabbitMQ adapter). */
 export interface EventPublisher {
   documentIndexRequested(event: DocumentIndexRequested): Promise<void>;
+  documentPdfRequested(event: DocumentPdfRequested): Promise<void>;
 }
 
 /** Key/value cache with TTL (Redis adapter). */
@@ -90,6 +94,18 @@ export interface AvatarStorage {
   put(input: { userId: string; data: Uint8Array; contentType: string }): Promise<void>;
   get(userId: string): Promise<StoredAvatar | null>;
   remove(userId: string): Promise<void>;
+}
+
+/** Renders a document's HTML into PDF bytes (headless-browser adapter). */
+export interface PdfRenderer {
+  render(input: { title: string; contentHtml: string }): Promise<Uint8Array>;
+}
+
+/** One private PDF per published document, addressed by owner + document id. */
+export interface DocumentPdfStorage {
+  put(input: { ownerId: string; documentId: string; data: Uint8Array }): Promise<void>;
+  get(input: { ownerId: string; documentId: string }): Promise<Uint8Array | null>;
+  remove(input: { ownerId: string; documentId: string }): Promise<void>;
 }
 
 export interface Clock {
