@@ -24,6 +24,13 @@ const MAP: Record<DomainErrorCode, { status: number; message: string }> = {
     message: 'Sua sessão expirou. Entre novamente.',
   },
   'user-not-found': { status: HttpStatus.NOT_FOUND, message: 'Usuário não encontrado.' },
+  'document-not-found': { status: HttpStatus.NOT_FOUND, message: 'Documento não encontrado.' },
+  forbidden: { status: HttpStatus.FORBIDDEN, message: 'Você não tem acesso a este documento.' },
+  'stale-version': {
+    status: HttpStatus.CONFLICT,
+    message: 'O documento foi alterado em outro lugar. Recarregue e tente de novo.',
+  },
+  'slug-taken': { status: HttpStatus.CONFLICT, message: 'Este endereço (slug) já está em uso.' },
 };
 
 @Catch(DomainError)
