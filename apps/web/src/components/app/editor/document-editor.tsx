@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PaginationPlus } from 'tiptap-pagination-plus';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
+import { LineHeight } from './line-height';
 import { DEFAULT_GEOMETRY, readableTextColor } from './page-config';
 import { ResizableImage } from './resizable-image';
 import { usePageConfig } from './use-page-config';
@@ -39,6 +40,7 @@ export function DocumentEditor() {
       FontSize,
       Color,
       TextAlign.configure({ types: ['paragraph'] }),
+      LineHeight.configure({ types: ['paragraph'] }),
       Highlight.configure({ multicolor: true }),
       ResizableImage.configure({ inline: true, allowBase64: true }),
       // Real A4 pagination: content reflows across pages, like Word / Google Docs.
