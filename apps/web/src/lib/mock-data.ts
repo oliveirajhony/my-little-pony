@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { Globe, Settings } from 'lucide-react';
+import { SEED_CONTENT } from './seed-content';
 
 export const mockUser = {
   name: 'Jhony Oliveira',
@@ -37,7 +38,7 @@ export type Doc = {
   content?: string;
 };
 
-export const documents: Doc[] = [
+const seedDocuments: Doc[] = [
   {
     id: 'd1',
     title: 'Guia de boas práticas de escrita',
@@ -98,4 +99,15 @@ export const documents: Doc[] = [
   },
 ];
 
+// Injeta o corpo HTML dos seeds a partir do módulo de conteúdo (mantém os
+// objetos acima enxutos).
+export const documents: Doc[] = seedDocuments.map((doc) => ({
+  ...doc,
+  content: SEED_CONTENT[doc.id] ?? doc.content,
+}));
+
 export const publishedDocs = documents.filter((doc) => doc.status === 'published');
+
+export function findPublishedDoc(slug: string): Doc | undefined {
+  return documents.find((doc) => doc.slug === slug && doc.status === 'published');
+}

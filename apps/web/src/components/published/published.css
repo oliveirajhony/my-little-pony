@@ -1,0 +1,38 @@
+/* Fundo editorial claro e arejado da página pública: um glow sutil da marca
+   sobre o background, presente em ambos os temas. */
+.published-page {
+  background:
+    radial-gradient(
+      900px 600px at 50% -10%,
+      color-mix(in oklab, var(--primary) 12%, transparent),
+      transparent 70%
+    ),
+    var(--background);
+}
+
+/* Impressão / "Baixar PDF": esconde todo o chrome e imprime apenas as folhas,
+   no tamanho natural (sem o zoom da tela). */
+@media print {
+  /* Unlayered rules beat Tailwind's layered utilities, so no !important needed. */
+  [data-print="hide"] {
+    display: none;
+  }
+  .published-page {
+    background: #fff;
+  }
+  /* These override inline styles (the on-screen zoom footprint/scale), which only
+     !important can beat. */
+  .mlp-doc-footprint {
+    /* biome-ignore lint/complexity/noImportantStyles: print overrides the inline zoom size */
+    width: auto !important;
+    /* biome-ignore lint/complexity/noImportantStyles: print overrides the inline zoom size */
+    height: auto !important;
+  }
+  .mlp-doc-pages {
+    /* biome-ignore lint/complexity/noImportantStyles: print overrides the inline zoom transform */
+    transform: none !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}

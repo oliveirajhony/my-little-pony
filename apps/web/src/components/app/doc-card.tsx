@@ -66,9 +66,11 @@ export function DocCard({ doc, activeCategories, onToggleCategory }: Props) {
               </Link>
             </DropdownMenuItem>
             {published && (
-              <DropdownMenuItem>
-                <ExternalLink />
-                Ir para o site
+              <DropdownMenuItem asChild>
+                <a href={`/d/${doc.slug}`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink />
+                  Ir para o site
+                </a>
               </DropdownMenuItem>
             )}
             {published ? (
