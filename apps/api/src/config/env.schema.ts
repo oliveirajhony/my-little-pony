@@ -14,6 +14,8 @@ export const EnvSchema = z.object({
   INTERNAL_API_TOKEN: secret,
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
+  // Allowed browser origin for CORS (the web app). Not a secret.
+  WEB_ORIGIN: z.string().url().default('http://localhost:3000'),
 });
 
 export type AppConfig = {
@@ -26,6 +28,7 @@ export type AppConfig = {
   internalApiToken: string;
   jwtAccessTtl: string;
   jwtRefreshTtl: string;
+  webOrigin: string;
 };
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -48,5 +51,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     internalApiToken: env_.INTERNAL_API_TOKEN,
     jwtAccessTtl: env_.JWT_ACCESS_TTL,
     jwtRefreshTtl: env_.JWT_REFRESH_TTL,
+    webOrigin: env_.WEB_ORIGIN,
   };
 }
