@@ -3,8 +3,10 @@ import { getDataSourceToken, TypeOrmModule } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
 import { APP_CONFIG } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
-import { USER_REPOSITORY } from '../tokens';
+import { DOCUMENT_REPOSITORY, USER_REPOSITORY } from '../tokens';
 import { buildTypeOrmOptions } from './data-source';
+import { DocumentOrmEntity } from './document.orm-entity';
+import { TypeOrmDocumentRepository } from './typeorm-document.repository';
 import { TypeOrmUserRepository } from './typeorm-user.repository';
 import { UserOrmEntity } from './user.orm-entity';
 
@@ -28,7 +30,13 @@ import { UserOrmEntity } from './user.orm-entity';
       useFactory: (dataSource: DataSource) =>
         new TypeOrmUserRepository(dataSource.getRepository(UserOrmEntity)),
     },
+    {
+      provide: DOCUMENT_REPOSITORY,
+      inject: [getDataSourceToken()],
+      useFactory: (dataSource: DataSource) =>
+        new TypeOrmDocumentRepository(dataSource.getRepository(DocumentOrmEntity)),
+    },
   ],
-  exports: [USER_REPOSITORY],
+  exports: [USER_REPOSITORY, DOCUMENT_REPOSITORY],
 })
 export class PersistenceModule {}

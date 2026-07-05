@@ -15,12 +15,33 @@ export {
   RemoveAvatar,
   SetAvatar,
 } from './application/avatar-use-cases.js';
+export {
+  CreateDocument,
+  DeleteDocument,
+  GetDocument,
+  GetPublicDocument,
+  ListDocuments,
+  MarkDocumentIndexed,
+  type PublicDocument,
+  PublishDocument,
+  publicDocumentKey,
+  SaveDraft,
+  UnpublishDocument,
+} from './application/document-use-cases.js';
 export type {
   AvatarStorage,
+  CacheStore,
   Clock,
+  DocumentIndexRequested,
+  DocumentPage,
+  DocumentQuery,
+  DocumentRepository,
+  EventPublisher,
   IdGenerator,
   PasswordHasher,
   RefreshTokenStore,
+  SearchGateway,
+  SearchHit,
   StoredAvatar,
   TokenService,
   UserRepository,
@@ -30,5 +51,15 @@ export {
   GetProfile,
   UpdateProfile,
 } from './application/profile-use-cases.js';
+export {
+  SearchDocuments,
+  type SearchResultItem,
+} from './application/search-use-cases.js';
+export {
+  Document,
+  type DocumentProps,
+  type DocumentStatus,
+  type IndexStatus,
+} from './domain/document.js';
 export { DomainError, type DomainErrorCode } from './domain/errors.js';
 export { User, type UserProps } from './domain/user.js';

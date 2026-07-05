@@ -24,6 +24,8 @@ export const EnvSchema = z.object({
   MINIO_ACCESS_KEY: z.string().default('mlp'),
   MINIO_SECRET_KEY: z.string().default('mlpsecret123'),
   MINIO_BUCKET: z.string().default('avatars'),
+  // Python search/indexing service base URL. Empty until Spec 2 is deployed.
+  SEARCH_SERVICE_URL: z.string().default(''),
 });
 
 export type AppConfig = {
@@ -43,6 +45,7 @@ export type AppConfig = {
   minioAccessKey: string;
   minioSecretKey: string;
   minioBucket: string;
+  searchServiceUrl: string;
 };
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -72,5 +75,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     minioAccessKey: env_.MINIO_ACCESS_KEY,
     minioSecretKey: env_.MINIO_SECRET_KEY,
     minioBucket: env_.MINIO_BUCKET,
+    searchServiceUrl: env_.SEARCH_SERVICE_URL,
   };
 }
