@@ -44,7 +44,7 @@ export class AvatarController {
   @UseGuards(AccessTokenGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Envia uma imagem de avatar' })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
   async upload(@CurrentUser() user: AuthUser, @UploadedFile() file?: UploadedImage) {
     if (!file?.buffer?.length) throw new DomainError('invalid-image');
     if (!file.mimetype.startsWith('image/')) throw new DomainError('invalid-image');
