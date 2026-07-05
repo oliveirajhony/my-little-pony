@@ -1,6 +1,11 @@
-import { User, type UserRepository } from '@my-little-pony/core';
+import { DomainError, User, type UserRepository } from '@my-little-pony/core';
 import type { Repository } from 'typeorm';
+import { isUniqueViolation } from './pg-unique-violation';
 import { UserOrmEntity } from './user.orm-entity';
+
+// Unique index on the normalized email (see
+// migrations/1751673600000-CreateUsers.ts).
+const EMAIL_UNIQUE_INDEX = 'users_email_unique';
 
 /** UserRepository port backed by TypeORM. Maps rows <-> domain aggregate. */
 export class TypeOrmUserRepository implements UserRepository {
@@ -17,7 +22,14 @@ export class TypeOrmUserRepository implements UserRepository {
   }
 
   async save(user: User): Promise<void> {
-    await this.repo.save(this.toOrm(user));
+    try {
+      await this.repo.save(this.toOrm(user));
+    } catch (error) {
+      if (isUniqueViolation(error, EMAIL_UNIQUE_INDEX)) {
+        throw new DomainError('email-taken');
+      }
+      throw error;
+    }
   }
 
   private toDomain(row: UserOrmEntity): User {
