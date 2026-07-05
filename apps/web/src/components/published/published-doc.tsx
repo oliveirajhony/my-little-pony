@@ -3,8 +3,8 @@
 import { Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import type { PublicDoc } from '../../lib/documents-api';
 import { fullDate, relativeDate } from '../../lib/format-date';
-import type { Doc } from '../../lib/mock-data';
 import { DocIcon } from '../icons';
 import { ContactForm } from './contact-form';
 import { DocActions } from './doc-actions';
@@ -19,10 +19,10 @@ const REPO_URL = 'https://github.com/oliveirajhony/my-little-pony';
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.5;
 
-export function PublishedDoc({ doc }: { doc: Doc }) {
+export function PublishedDoc({ doc }: { doc: PublicDoc }) {
   const [zoom, setZoom] = useState(0.85);
   const [fullscreen, setFullscreen] = useState(false);
-  const content = doc.content ?? `<p>${doc.excerpt}</p>`;
+  const content = doc.content || `<p>${doc.excerpt}</p>`;
 
   return (
     <div className="published-page min-h-svh">

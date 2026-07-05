@@ -29,8 +29,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { getDocById, slugify, useDocuments, useDocumentsStore } from '../../../lib/documents-store';
-import type { DocStatus } from '../../../lib/mock-data';
+import { asApiError } from '../../../lib/api-client';
+import {
+  createDocument,
+  type DocStatus,
+  getDocument,
+  publishDocument,
+  saveDocument,
+  unpublishDocument,
+} from '../../../lib/documents-api';
+import { slugify, useDocumentsStore } from '../../../lib/documents-store';
 import { DocumentDetailsPanel } from './document-details-panel';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
@@ -61,10 +69,12 @@ export function DocumentEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editingId = searchParams.get('id');
-  const { hydrated } = useDocuments();
-  const saveDoc = useDocumentsStore((s) => s.saveDoc);
+  const upsert = useDocumentsStore((s) => s.upsert);
 
   const [docId, setDocId] = useState<string | null>(editingId);
+  const [version, setVersion] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
   const [status, setStatus] = useState<DocStatus>('draft');
@@ -153,34 +163,76 @@ export function DocumentEditor() {
 
   const { config, updateConfig, geometry } = usePageConfig(editor);
 
-  // Load an existing document when opened via /app/editor?id=… — waits for the
-  // store to rehydrate so we read persisted content, not the seed.
+  // Load an existing document when opened via /app/editor?id=… — fetches the
+  // full detail (content + version) from the backend.
   useEffect(() => {
-    if (!editor || !editingId || !hydrated) return;
-    const doc = getDocById(editingId);
-    if (!doc) return;
-    setTitle(doc.title);
-    setCategories(doc.categories);
-    setStatus(doc.status);
-    setSlugOverride(doc.slug);
-    editor.commands.setContent(doc.content ?? `<p>${doc.excerpt}</p>`);
-  }, [editor, editingId, hydrated]);
+    if (!editor || !editingId) return;
+    let active = true;
+    getDocument(editingId)
+      .then((doc) => {
+        if (!active) return;
+        setTitle(doc.title);
+        setCategories(doc.categories);
+        setStatus(doc.status);
+        setSlugOverride(doc.slug);
+        setVersion(doc.version);
+        editor.commands.setContent(doc.content || '<p></p>');
+      })
+      .catch(() => {
+        // Documento inexistente ou de outro autor — volta para a lista.
+        if (active) router.replace('/app');
+      });
+    return () => {
+      active = false;
+    };
+  }, [editor, editingId, router]);
 
   const slug = slugOverride ?? slugify(title);
 
-  function handleSave() {
-    if (!editor) return;
-    const id = saveDoc({
-      id: docId ?? undefined,
-      title,
-      content: editor.getHTML(),
-      text: editor.getText(),
-      categories,
-      slug,
-      status,
-    });
-    setDocId(id);
-    router.push('/app');
+  async function handleSave() {
+    if (!editor || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const trimmedTitle = title.trim() || 'Documento sem título';
+      let id = docId;
+      let ver = version;
+      // Cria o rascunho no primeiro save; depois é só autosave por versão.
+      if (!id) {
+        const created = await createDocument(trimmedTitle);
+        id = created.id;
+        ver = created.version;
+      }
+      const saved = await saveDocument(id, {
+        version: ver,
+        title: trimmedTitle,
+        content: editor.getHTML(),
+        slug,
+        categories,
+      });
+      let summary = { ...saved };
+      // Reconcilia o estado de publicação escolhido no painel de detalhes.
+      if (status === 'published' && saved.status !== 'published') {
+        summary = { ...summary, ...(await publishDocument(id)) };
+      } else if (status === 'draft' && saved.status === 'published') {
+        summary = { ...summary, ...(await unpublishDocument(id)) };
+      }
+      setDocId(id);
+      setVersion(summary.version);
+      setStatus(summary.status);
+      setSlugOverride(summary.slug);
+      const { content: _content, ...listItem } = summary;
+      upsert(listItem);
+      router.push('/app');
+    } catch (err) {
+      setSaveError(
+        asApiError(err)?.code === 'stale-version'
+          ? 'Este documento mudou em outra aba. Recarregue para continuar.'
+          : (asApiError(err)?.message ?? 'Não foi possível salvar. Tente de novo.'),
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Measure the paginated flow (floating-image bounds) and the page count.
@@ -271,9 +323,9 @@ export function DocumentEditor() {
   );
 
   const saveButton = (
-    <Button onClick={handleSave}>
+    <Button onClick={handleSave} disabled={saving}>
       <Check />
-      Salvar
+      {saving ? 'Salvando…' : 'Salvar'}
     </Button>
   );
 
@@ -373,6 +425,11 @@ export function DocumentEditor() {
         </div>
         <div className="mlp-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4">{detailsPanel}</div>
         <div className="shrink-0 border-t px-4 py-3">
+          {saveError && (
+            <p className="mb-2 text-xs text-destructive" role="alert">
+              {saveError}
+            </p>
+          )}
           <div className="[&>button]:w-full">{saveButton}</div>
         </div>
       </aside>

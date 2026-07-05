@@ -1,30 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
-import { type Doc, documents as seedDocuments } from './mock-data';
+import {
+  type DocStatus,
+  type DocSummary,
+  deleteDocument,
+  listDocuments,
+  publishDocument,
+  unpublishDocument,
+} from './documents-api';
 
 /**
- * Client-side document store. Seeded from the mock data and persisted to
- * localStorage, so the editor can create/update documents that show up on the
- * Documentos screen and survive a reload.
- *
- * This is the single seam the real backend will replace: swap the store's
- * actions for API calls and every consumer keeps working unchanged.
+ * Store da lista de documentos da área logada. Os dados vêm do backend
+ * (`GET /documents`); as ações de card (apagar/publicar) chamam a API e
+ * atualizam o estado local, sem recarregar a lista inteira. O editor faz
+ * suas próprias chamadas e usa `upsert` para refletir a mudança aqui.
  */
 
-const EXCERPT_LENGTH = 180;
-
-export type SaveDocInput = {
-  id?: string;
-  title: string;
-  content: string;
-  text: string;
-  categories: string[];
-  slug?: string;
-  status?: Doc['status'];
-};
+export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export function slugify(value: string): string {
   const slug = value
@@ -37,102 +31,78 @@ export function slugify(value: string): string {
   return slug || 'documento';
 }
 
-function makeExcerpt(text: string): string {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  if (clean.length <= EXCERPT_LENGTH) return clean;
-  return `${clean.slice(0, EXCERPT_LENGTH).trimEnd()}…`;
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function newId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return `doc-${Date.now()}`;
-}
-
 type DocumentsState = {
-  documents: Doc[];
-  saveDoc: (input: SaveDocInput) => string;
-  removeDoc: (id: string) => void;
-  setStatus: (id: string, status: Doc['status']) => void;
+  documents: DocSummary[];
+  status: LoadStatus;
+  /** Carrega a lista uma vez (no-op se já carregada ou carregando). */
+  load: () => Promise<void>;
+  /** Recarrega a lista incondicionalmente. */
+  refresh: () => Promise<void>;
+  removeDoc: (id: string) => Promise<void>;
+  setStatus: (id: string, status: DocStatus) => Promise<void>;
+  /** Insere/atualiza um documento na lista (usado pelo editor após salvar). */
+  upsert: (doc: DocSummary) => void;
 };
 
-export const useDocumentsStore = create<DocumentsState>()(
-  persist(
-    (set) => ({
-      documents: seedDocuments,
+export const useDocumentsStore = create<DocumentsState>()((set, get) => ({
+  documents: [],
+  status: 'idle',
 
-      saveDoc: ({ id, title, content, text, categories, slug, status }) => {
-        const trimmedTitle = title.trim() || 'Documento sem título';
-        const excerpt = makeExcerpt(text) || 'Documento em branco.';
-        const docId = id ?? newId();
+  load: async () => {
+    if (get().status !== 'idle') return;
+    set({ status: 'loading' });
+    try {
+      const { items } = await listDocuments();
+      set({ documents: items, status: 'ready' });
+    } catch {
+      set({ status: 'error' });
+    }
+  },
 
-        set((state) => {
-          const existing = state.documents.find((doc) => doc.id === docId);
-          const next: Doc = {
-            id: docId,
-            title: trimmedTitle,
-            excerpt,
-            categories,
-            content,
-            status: status ?? existing?.status ?? 'draft',
-            slug: slug?.trim() ? slugify(slug) : slugify(trimmedTitle),
-            updatedAt: today(),
-          };
-          const documents = existing
-            ? state.documents.map((doc) => (doc.id === docId ? next : doc))
-            : [next, ...state.documents];
-          return { documents };
-        });
+  refresh: async () => {
+    try {
+      const { items } = await listDocuments();
+      set({ documents: items, status: 'ready' });
+    } catch {
+      set({ status: 'error' });
+    }
+  },
 
-        return docId;
-      },
+  removeDoc: async (id) => {
+    await deleteDocument(id);
+    set((state) => ({ documents: state.documents.filter((doc) => doc.id !== id) }));
+  },
 
-      removeDoc: (id) =>
-        set((state) => ({ documents: state.documents.filter((doc) => doc.id !== id) })),
+  setStatus: async (id, status) => {
+    const updated =
+      status === 'published' ? await publishDocument(id) : await unpublishDocument(id);
+    set((state) => ({
+      documents: state.documents.map((doc) => (doc.id === id ? updated : doc)),
+    }));
+  },
 
-      setStatus: (id, status) =>
-        set((state) => ({
-          documents: state.documents.map((doc) => (doc.id === id ? { ...doc, status } : doc)),
-        })),
+  upsert: (doc) =>
+    set((state) => {
+      const exists = state.documents.some((d) => d.id === doc.id);
+      const documents = exists
+        ? state.documents.map((d) => (d.id === doc.id ? doc : d))
+        : [doc, ...state.documents];
+      return { documents };
     }),
-    {
-      name: 'mlp.documents',
-      storage: createJSONStorage(() => localStorage),
-      // We rehydrate manually after mount so server and first client render both
-      // use the seed data — avoids hydration mismatches.
-      skipHydration: true,
-    },
-  ),
-);
-
-export function getDocById(id: string): Doc | undefined {
-  return useDocumentsStore.getState().documents.find((doc) => doc.id === id);
-}
+}));
 
 /**
- * Subscribe to the documents and trigger the one-time localStorage rehydration.
- * `hydrated` flips to true once the persisted state is loaded — use it when you
- * need the *real* data (e.g. loading a document by id) rather than the seed.
+ * Assina a lista e dispara o carregamento inicial no mount. `hydrated` vira
+ * true assim que a primeira carga resolve (com dados ou erro), para os
+ * consumidores saberem que já não é um estado vazio transitório.
  */
 export function useDocuments() {
   const documents = useDocumentsStore((state) => state.documents);
-  // Start false on both server and client so the first render matches; the
-  // effect (client only) reads/loads the persisted state after mount.
-  const [hydrated, setHydrated] = useState(false);
+  const status = useDocumentsStore((state) => state.status);
 
   useEffect(() => {
-    const { persist: persistApi } = useDocumentsStore;
-    if (persistApi.hasHydrated()) {
-      setHydrated(true);
-      return;
-    }
-    const unsub = persistApi.onFinishHydration(() => setHydrated(true));
-    persistApi.rehydrate();
-    return unsub;
+    void useDocumentsStore.getState().load();
   }, []);
 
-  return { documents, hydrated };
+  return { documents, hydrated: status === 'ready' || status === 'error' };
 }
