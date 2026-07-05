@@ -24,10 +24,13 @@ type AuthState = {
     name?: string;
     email?: string;
     avatarUrl?: string | null;
+    /** Obrigatória (verificada no backend) quando o e-mail muda. */
+    currentPassword?: string;
   }) => Promise<void>;
   changePassword: (input: { current: string; next: string }) => Promise<void>;
   uploadAvatarFile: (file: File) => Promise<void>;
   uploadAvatarFromUrl: (url: string) => Promise<void>;
+  removeAvatar: () => Promise<void>;
 };
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -110,6 +113,11 @@ export const useAuth = create<AuthState>((set, get) => ({
       method: 'POST',
       body: JSON.stringify({ url }),
     });
+    set({ user });
+  },
+
+  removeAvatar: async () => {
+    const user = await apiFetch<AuthUser>('/users/me/avatar', { method: 'DELETE' });
     set({ user });
   },
 }));
