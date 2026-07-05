@@ -5,3 +5,4 @@ export const TOKEN_SERVICE = Symbol('TokenService');
 export const REFRESH_TOKEN_STORE = Symbol('RefreshTokenStore');
 export const ID_GENERATOR = Symbol('IdGenerator');
 export const CLOCK = Symbol('Clock');
+export const AVATAR_STORAGE = Symbol('AvatarStorage');

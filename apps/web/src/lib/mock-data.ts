@@ -2,12 +2,6 @@ import type { LucideIcon } from 'lucide-react';
 import { Globe, Settings } from 'lucide-react';
 import { SEED_CONTENT } from './seed-content';
 
-export const mockUser = {
-  name: 'Jhony Oliveira',
-  email: 'jhony@mlp.app',
-  initials: 'JO',
-};
-
 export type Screen = { title: string; href: string; icon: LucideIcon };
 
 export const screens: Screen[] = [

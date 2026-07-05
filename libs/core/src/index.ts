@@ -10,11 +10,18 @@ export {
   RegisterUser,
   SessionIssuer,
 } from './application/auth-use-cases.js';
+export {
+  type AvatarImage,
+  RemoveAvatar,
+  SetAvatar,
+} from './application/avatar-use-cases.js';
 export type {
+  AvatarStorage,
   Clock,
   IdGenerator,
   PasswordHasher,
   RefreshTokenStore,
+  StoredAvatar,
   TokenService,
   UserRepository,
 } from './application/ports.js';

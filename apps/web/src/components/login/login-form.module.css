@@ -249,6 +249,29 @@
   text-decoration: underline;
 }
 
+/* Link visual num <button> (troca de login/cadastro). */
+.linkBtn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--blue);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.linkBtn:hover {
+  color: var(--blue-strong);
+  text-decoration: underline;
+}
+
+.linkBtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .btn {
   width: 100%;
   position: relative;
