@@ -8,7 +8,11 @@ export type DomainErrorCode =
   | 'bad-credentials'
   | 'stale-token'
   | 'user-not-found'
-  | 'invalid-image';
+  | 'invalid-image'
+  | 'document-not-found'
+  | 'forbidden'
+  | 'stale-version'
+  | 'slug-taken';
 
 export class DomainError extends Error {
   constructor(readonly code: DomainErrorCode) {

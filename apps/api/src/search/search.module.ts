@@ -1,0 +1,25 @@
+import { type DocumentRepository, SearchDocuments, type SearchGateway } from '@my-little-pony/core';
+import { Module } from '@nestjs/common';
+import { APP_CONFIG } from '../config/config.module';
+import type { AppConfig } from '../config/env.schema';
+import { DOCUMENT_REPOSITORY, SEARCH_GATEWAY } from '../tokens';
+import { HttpSearchGateway } from './http-search.gateway';
+import { SearchController } from './search.controller';
+
+@Module({
+  controllers: [SearchController],
+  providers: [
+    {
+      provide: SEARCH_GATEWAY,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => new HttpSearchGateway(config.searchServiceUrl),
+    },
+    {
+      provide: SearchDocuments,
+      inject: [SEARCH_GATEWAY, DOCUMENT_REPOSITORY],
+      useFactory: (gateway: SearchGateway, repo: DocumentRepository) =>
+        new SearchDocuments(gateway, repo),
+    },
+  ],
+})
+export class SearchModule {}
