@@ -19,12 +19,10 @@ import { usePageConfig } from './use-page-config';
 
 export type ImageMode = 'inline' | 'floating';
 
-const INITIAL_CONTENT = `
-  <p><strong><span style="font-size: 30px">Documento sem título</span></strong></p>
-  <p>Comece a escrever aqui. Use a barra acima para formatar: fonte, tamanho, cor, alinhamento, listas e mais — e insira imagens para arrastar onde quiser.</p>
-`;
+const INITIAL_CONTENT = '<p></p>';
 
 export function DocumentEditor() {
+  const [title, setTitle] = useState('');
   const [images, setImages] = useState<FloatingImageData[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // Height of the paginated flow — keeps floating images inside the document bounds.
@@ -125,6 +123,14 @@ export function DocumentEditor() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
+      <input
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        placeholder="Documento sem título"
+        aria-label="Título do documento"
+        className="w-full truncate bg-transparent px-1 font-display text-xl font-semibold outline-none placeholder:text-muted-foreground/50"
+      />
+
       <EditorToolbar
         editor={editor}
         pageConfig={config}
