@@ -44,24 +44,28 @@ async function toResult<T>(res: Response): Promise<T> {
   return data as T;
 }
 
-function jsonInit(options: RequestInit): RequestInit {
+function baseInit(options: RequestInit): RequestInit {
+  const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
   return {
     ...options,
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    // FormData define seu próprio Content-Type (boundary) — não sobrescrever.
+    headers: isForm
+      ? (options.headers ?? {})
+      : { 'Content-Type': 'application/json', ...options.headers },
   };
 }
 
 /** Rotas de autenticação (`/auth/*`): sem Bearer e sem retry de refresh. */
 export function authFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  return fetch(`${API_BASE}${path}`, jsonInit(options)).then(toResult<T>);
+  return fetch(`${API_BASE}${path}`, baseInit(options)).then(toResult<T>);
 }
 
 /** Rotas protegidas: injeta o access token e renova no 401 (uma vez). */
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const send = () => {
     const token = getAccessToken();
-    const init = jsonInit(options);
+    const init = baseInit(options);
     return fetch(`${API_BASE}${path}`, {
       ...init,
       headers: token ? { ...init.headers, Authorization: `Bearer ${token}` } : init.headers,

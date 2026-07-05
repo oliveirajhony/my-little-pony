@@ -3,7 +3,7 @@
 import { LogOut, Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Sidebar,
   SidebarContent,
@@ -110,6 +110,9 @@ export function AppSidebar() {
             <SidebarMenuButton size="lg" asChild tooltip={name}>
               <Link href="/app/config">
                 <Avatar className="size-8 rounded-lg">
+                  {user?.avatarUrl && (
+                    <AvatarImage src={user.avatarUrl} alt="" className="rounded-lg" />
+                  )}
                   <AvatarFallback className="rounded-lg bg-accent text-accent-foreground">
                     {initials}
                   </AvatarFallback>

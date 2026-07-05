@@ -58,3 +58,6 @@ out.next
 
 vitest.config.*.timestamp*
 .env
+
+# Local env overrides
+.env*.local
