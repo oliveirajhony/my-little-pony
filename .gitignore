@@ -55,3 +55,6 @@ out.next
 
 # tooling
 .mcp.json
+
+vitest.config.*.timestamp*
+.env

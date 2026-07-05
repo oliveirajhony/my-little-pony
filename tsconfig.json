@@ -5,6 +5,15 @@
   "references": [
     {
       "path": "./apps/web"
+    },
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./libs/core"
+    },
+    {
+      "path": "./packages/contracts"
     }
   ]
 }
