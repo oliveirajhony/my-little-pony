@@ -113,3 +113,61 @@
     border-color: var(--border);
   }
 }
+
+/* Subtle, theme-aware scrollbar for our custom scroll containers — a slim pill
+   in the muted-foreground tone with a transparent track. Themes automatically
+   because it's built from the design tokens. */
+.mlp-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 32%, transparent) transparent;
+}
+.mlp-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.mlp-scrollbar::-webkit-scrollbar-track,
+.mlp-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.mlp-scrollbar::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklab, var(--muted-foreground) 32%, transparent);
+  border-radius: 9999px;
+  /* Transparent border + padding-box clip = a slim thumb with breathing room. */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.mlp-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklab, var(--muted-foreground) 55%, transparent);
+}
+
+/* Skeleton shimmer — a single sheen that sweeps across placeholder blocks.
+   The `.mlp-skeleton` block carries the muted fill; the ::after is the sheen. */
+.mlp-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--muted);
+  border-radius: var(--radius-md);
+}
+.mlp-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--foreground) 7%, transparent),
+    transparent
+  );
+  animation: mlp-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes mlp-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mlp-skeleton::after {
+    animation: none;
+  }
+}

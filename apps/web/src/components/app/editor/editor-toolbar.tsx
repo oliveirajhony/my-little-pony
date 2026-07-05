@@ -7,19 +7,17 @@ import {
   AlignJustify,
   AlignLeft,
   AlignRight,
+  AlignVerticalSpaceAround,
   Baseline,
   Bold,
   Highlighter,
   Image as ImageIcon,
-  ImagePlus,
   Italic,
   List,
   ListOrdered,
   Minus,
+  MoreHorizontal,
   Move,
-  PaintBucket,
-  RectangleHorizontal,
-  RectangleVertical,
   Redo2,
   Strikethrough,
   Underline as UnderlineIcon,
@@ -31,6 +29,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -45,15 +45,16 @@ import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ImageMode, Orientation } from './document-editor';
+import type { ImageMode } from './document-editor';
 import { FontPicker } from './font-picker';
+import type { PageConfig } from './page-config';
+import { PageSetupDialog } from './page-setup-dialog';
 
 type Props = {
   editor: Editor | null;
-  orientation: Orientation;
-  onOrientationChange: (value: Orientation) => void;
+  pageConfig: PageConfig;
+  onPageConfigChange: (config: PageConfig) => void;
   onInsertImage: (src: string, mode: ImageMode) => void;
-  onPageBgChange: (value: string) => void;
 };
 
 const SIZES = ['12px', '14px', '16px', '18px', '24px', '30px', '36px', '48px'];
@@ -68,7 +69,6 @@ const TEXT_COLORS = [
   '#db2777',
 ];
 const HIGHLIGHTS = ['#fff3bf', '#d3f9d8', '#d0ebff', '#ffd8a8', '#ffc9c9', '#e5dbff'];
-const PAGE_BGS = ['#ffffff', '#fbfbfd', '#f7f5ef', '#eef3fb', '#f4f0fb', '#1d1d1f'];
 
 function Hint({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -134,13 +134,7 @@ function ColorPopover({
   );
 }
 
-export function EditorToolbar({
-  editor,
-  orientation,
-  onOrientationChange,
-  onInsertImage,
-  onPageBgChange,
-}: Props) {
+export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsertImage }: Props) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => {
@@ -164,6 +158,14 @@ export function EditorToolbar({
               : 'left',
         fontFamily: (style.fontFamily as string) ?? 'default',
         fontSize: (style.fontSize as string) ?? 'default',
+        lineHeight: (e.getAttributes('paragraph').lineHeight as string) ?? 'default',
+        blockType: e.isActive('heading', { level: 1 })
+          ? 'h1'
+          : e.isActive('heading', { level: 2 })
+            ? 'h2'
+            : e.isActive('heading', { level: 3 })
+              ? 'h3'
+              : 'paragraph',
       };
     },
   });
@@ -187,7 +189,11 @@ export function EditorToolbar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-xl border bg-card p-1.5 shadow-sm">
+    <div
+      // Docked to the top of the editor column: full width, square top corners,
+      // rounded bottom. Scrolls horizontally when it doesn't fit.
+      className="editor-toolbar-scroll flex shrink-0 items-center gap-1 overflow-x-auto rounded-b-xl border-b bg-card px-2 py-1.5 shadow-sm [&>*]:shrink-0"
+    >
       <Hint label="Desfazer">
         <Button
           variant="ghost"
@@ -214,6 +220,27 @@ export function EditorToolbar({
       </Hint>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
+
+      <Select
+        value={state.blockType}
+        onValueChange={(value) =>
+          value === 'paragraph'
+            ? chain().setParagraph().run()
+            : chain()
+                .setHeading({ level: Number(value.slice(1)) as 1 | 2 | 3 })
+                .run()
+        }
+      >
+        <SelectTrigger size="sm" className="w-[116px]" aria-label="Estilo do texto">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="paragraph">Normal</SelectItem>
+          <SelectItem value="h1">Título 1</SelectItem>
+          <SelectItem value="h2">Título 2</SelectItem>
+          <SelectItem value="h3">Título 3</SelectItem>
+        </SelectContent>
+      </Select>
 
       <FontPicker
         current={state.fontFamily}
@@ -331,6 +358,39 @@ export function EditorToolbar({
         </Hint>
       </ToggleGroup>
 
+      <DropdownMenu>
+        <Hint label="Espaçamento entre linhas">
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              aria-label="Espaçamento entre linhas"
+            >
+              <AlignVerticalSpaceAround />
+            </Button>
+          </DropdownMenuTrigger>
+        </Hint>
+        <DropdownMenuContent align="start">
+          <DropdownMenuRadioGroup
+            value={state.lineHeight}
+            onValueChange={(value) =>
+              value === 'default'
+                ? chain().unsetLineHeight().run()
+                : chain().setLineHeight(value).run()
+            }
+          >
+            <DropdownMenuRadioItem value="default">Padrão</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="1">1,0</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="1.15">1,15</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="1.5">1,5</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="2">2,0</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="2.5">2,5</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="3">3,0</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       <Hint label="Lista com marcadores">
@@ -353,26 +413,19 @@ export function EditorToolbar({
           <ListOrdered />
         </Toggle>
       </Hint>
-      <Hint label="Linha horizontal">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8"
-          aria-label="Linha horizontal"
-          onClick={() => chain().setHorizontalRule().run()}
-        >
-          <Minus />
-        </Button>
-      </Hint>
       <DropdownMenu>
-        <Hint label="Inserir imagem">
+        <Hint label="Mais">
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8" aria-label="Inserir imagem">
-              <ImagePlus />
+            <Button variant="ghost" size="icon" className="size-8" aria-label="Mais opções">
+              <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
         </Hint>
         <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => chain().setHorizontalRule().run()}>
+            <Minus />
+            Linha horizontal
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => pickFile('inline')}>
             <ImageIcon />
             Imagem em linha
@@ -386,31 +439,7 @@ export function EditorToolbar({
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
-      <ToggleGroup
-        type="single"
-        size="sm"
-        value={orientation}
-        onValueChange={(value) => value && onOrientationChange(value as Orientation)}
-      >
-        <Hint label="Retrato">
-          <ToggleGroupItem value="portrait" aria-label="Retrato">
-            <RectangleVertical />
-          </ToggleGroupItem>
-        </Hint>
-        <Hint label="Paisagem">
-          <ToggleGroupItem value="landscape" aria-label="Paisagem">
-            <RectangleHorizontal />
-          </ToggleGroupItem>
-        </Hint>
-      </ToggleGroup>
-
-      <ColorPopover icon={<PaintBucket />} label="Cor da página">
-        <Swatches
-          colors={PAGE_BGS}
-          onPick={onPageBgChange}
-          onReset={() => onPageBgChange('#ffffff')}
-        />
-      </ColorPopover>
+      <PageSetupDialog config={pageConfig} onChange={onPageConfigChange} />
     </div>
   );
 }
