@@ -38,5 +38,24 @@ services:
       timeout: 3s
       retries: 10
 
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: mlp
+      MINIO_ROOT_PASSWORD: mlpsecret123
+    ports:
+      # +10 offset (API 9010, console 9011) to coexist with other local stacks.
+      - "9010:9000"
+      - "9011:9001"
+    volumes:
+      - mlp_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   mlp_pg:
+  mlp_minio:

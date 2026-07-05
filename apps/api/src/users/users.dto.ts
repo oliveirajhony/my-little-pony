@@ -20,6 +20,13 @@ export class UpdateProfileDto {
   avatarUrl?: string | null;
 }
 
+export class AvatarFromUrlDto {
+  @ApiProperty({ example: 'https://exemplo.com/foto.jpg' })
+  @IsString()
+  @IsNotEmpty({ message: 'Informe a URL da imagem.' })
+  url!: string;
+}
+
 export class ChangePasswordDto {
   @ApiProperty({ example: 'segredo123' })
   @IsString()
