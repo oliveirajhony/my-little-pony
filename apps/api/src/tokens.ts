@@ -12,3 +12,4 @@ export const CLOCK = Symbol('Clock');
 export const AVATAR_STORAGE = Symbol('AvatarStorage');
 export const PDF_RENDERER = Symbol('PdfRenderer');
 export const DOCUMENT_PDF_STORAGE = Symbol('DocumentPdfStorage');
+export const EMAIL_SENDER = Symbol('EmailSender');

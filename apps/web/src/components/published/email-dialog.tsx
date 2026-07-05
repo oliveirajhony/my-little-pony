@@ -13,29 +13,56 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { API_BASE } from '../../lib/api-client';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** "Receber por e-mail". Mock: valida e confirma inline (sem envio real). */
-export function EmailDialog() {
+type Props = { ownerId: string; slug: string };
+
+/** "Receber por e-mail": pede o endereço e dispara o envio no backend (fila). */
+export function EmailDialog({ ownerId, slug }: Props) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
   function reset() {
     setEmail('');
     setError('');
+    setSending(false);
     setSent(false);
   }
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!EMAIL_RE.test(email)) {
       setError('Informe um e-mail válido.');
       return;
     }
-    setSent(true);
+    setError('');
+    setSending(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/public/documents/${ownerId}/${encodeURIComponent(slug)}/email`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        },
+      );
+      if (!res.ok) {
+        throw new Error(
+          res.status === 429
+            ? 'Muitas tentativas. Aguarde um instante e tente de novo.'
+            : 'Não foi possível enviar. Tente de novo.',
+        );
+      }
+      setSent(true);
+    } catch (err) {
+      setSending(false);
+      setError(err instanceof Error ? err.message : 'Não foi possível enviar. Tente de novo.');
+    }
   }
 
   return (
@@ -83,9 +110,9 @@ export function EmailDialog() {
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
             <div className="flex justify-end">
-              <Button type="submit">
+              <Button type="submit" disabled={sending}>
                 <Mail />
-                Enviar cópia
+                {sending ? 'Enviando…' : 'Enviar cópia'}
               </Button>
             </div>
           </form>
