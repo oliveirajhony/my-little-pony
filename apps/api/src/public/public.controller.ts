@@ -1,15 +1,21 @@
-import { GetDocumentPdf, GetPublicDocument } from '@my-little-pony/core';
+import { type EventPublisher, GetDocumentPdf, GetPublicDocument } from '@my-little-pony/core';
 import {
+  Body,
   Controller,
   Get,
+  HttpCode,
+  Inject,
   NotFoundException,
   Param,
   ParseUUIDPipe,
+  Post,
   Res,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { EVENT_PUBLISHER } from '../tokens';
+import { EmailDocumentDto } from './public.dto';
 
 export class PublicDocumentResponse {
   @ApiProperty()
@@ -41,6 +47,7 @@ export class PublicController {
   constructor(
     private readonly getPublicDocument: GetPublicDocument,
     private readonly getDocumentPdf: GetDocumentPdf,
+    @Inject(EVENT_PUBLISHER) private readonly events: EventPublisher,
   ) {}
 
   @Get(':ownerId/:slug')
@@ -70,5 +77,22 @@ export class PublicController {
     res.setHeader('Content-Disposition', `attachment; filename="${slug}.pdf"`);
     res.setHeader('Cache-Control', 'private, max-age=60');
     res.end(Buffer.from(pdf.data));
+  }
+
+  @Post(':ownerId/:slug/email')
+  @HttpCode(202)
+  // Endpoint anônimo que dispara e-mail — limite apertado contra abuso/spam.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Recebe o link do PDF por e-mail (assíncrono)' })
+  async email(
+    @Param('ownerId', new ParseUUIDPipe({ exceptionFactory: () => new NotFoundException() }))
+    ownerId: string,
+    @Param('slug') slug: string,
+    @Body() dto: EmailDocumentDto,
+  ): Promise<{ status: string }> {
+    // 404 se o documento não existe ou não está publicado.
+    await this.getPublicDocument.execute(ownerId, slug);
+    await this.events.documentPdfEmailRequested({ ownerId, slug, recipient: dto.email });
+    return { status: 'queued' };
   }
 }

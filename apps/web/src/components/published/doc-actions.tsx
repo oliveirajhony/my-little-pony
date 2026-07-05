@@ -18,7 +18,7 @@ export function DocActions({ ownerId, slug, onFullscreen }: Props) {
           Baixar PDF
         </a>
       </Button>
-      <EmailDialog />
+      <EmailDialog ownerId={ownerId} slug={slug} />
       <Button variant="outline" onClick={onFullscreen}>
         <Maximize2 />
         Tela cheia

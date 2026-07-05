@@ -7,6 +7,7 @@ import type {
   DocumentPdfStorage,
   DocumentQuery,
   DocumentRepository,
+  EmailSender,
   EventPublisher,
   IdGenerator,
   PdfRenderer,
@@ -256,5 +257,27 @@ export class GetDocumentPdf {
     const data = await this.storage.get({ ownerId, documentId: doc.id });
     if (!data) return null;
     return { title: doc.title, data };
+  }
+}
+
+function pdfEmailHtml(title: string, downloadUrl: string): string {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;line-height:1.5">
+  <p>Você pediu uma cópia do documento <strong>${title}</strong>.</p>
+  <p><a href="${downloadUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Baixar o PDF</a></p>
+  <p style="color:#6b7280;font-size:13px">Ou copie o link: ${downloadUrl}</p>
+</div>`;
+}
+
+/** Envia por e-mail o link de download do PDF de um documento publicado. */
+export class SendDocumentPdfEmail {
+  constructor(private readonly mailer: EmailSender) {}
+
+  async execute(input: { recipient: string; title: string; downloadUrl: string }): Promise<void> {
+    await this.mailer.send({
+      to: input.recipient,
+      subject: `Seu documento: ${input.title}`,
+      html: pdfEmailHtml(input.title, input.downloadUrl),
+      text: `Baixe "${input.title}" em: ${input.downloadUrl}`,
+    });
   }
 }

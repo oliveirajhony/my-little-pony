@@ -9,6 +9,7 @@ import {
   MarkDocumentIndexed,
   PublishDocument,
   SaveDraft,
+  SendDocumentPdfEmail,
   UnpublishDocument,
 } from './document-use-cases.js';
 import type {
@@ -46,6 +47,7 @@ const ids: IdGenerator = { next: () => `d${++seq}` };
 function makeEvents() {
   const published: string[] = [];
   const pdfRequested: string[] = [];
+  const emailRequested: string[] = [];
   const events: EventPublisher = {
     documentIndexRequested: async (e) => {
       published.push(e.documentId);
@@ -53,8 +55,11 @@ function makeEvents() {
     documentPdfRequested: async (e) => {
       pdfRequested.push(e.documentId);
     },
+    documentPdfEmailRequested: async (e) => {
+      emailRequested.push(e.recipient);
+    },
   };
-  return { events, published, pdfRequested };
+  return { events, published, pdfRequested, emailRequested };
 }
 
 class FakeDocs implements DocumentRepository {
@@ -228,6 +233,23 @@ describe('document use cases', () => {
     const { events, pdfRequested } = makeEvents();
     await new PublishDocument(repo, clock, events).execute({ id: doc.id, ownerId: 'u1' });
     expect(pdfRequested).toEqual([doc.id]);
+  });
+
+  it('sends the PDF download link by e-mail', async () => {
+    const sent: { to: string; subject: string; html: string }[] = [];
+    const mailer = {
+      send: async (m: { to: string; subject: string; html: string }) => {
+        sent.push(m);
+      },
+    };
+    await new SendDocumentPdfEmail(mailer).execute({
+      recipient: 'leitor@exemplo.com',
+      title: 'Relatório',
+      downloadUrl: 'http://localhost:3334/public/documents/u1/relatorio/pdf',
+    });
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe('leitor@exemplo.com');
+    expect(sent[0].html).toContain('/public/documents/u1/relatorio/pdf');
   });
 
   it('generates the PDF for a published doc and serves it by owner + slug', async () => {
