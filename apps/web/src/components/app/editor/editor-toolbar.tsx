@@ -18,12 +18,14 @@ import {
   ListOrdered,
   Minus,
   Move,
+  Pin,
+  PinOff,
   Redo2,
   Strikethrough,
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -45,6 +47,7 @@ import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import type { ImageMode } from './document-editor';
 import { FontPicker } from './font-picker';
 import type { PageConfig } from './page-config';
@@ -135,6 +138,8 @@ function ColorPopover({
 }
 
 export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsertImage }: Props) {
+  // When pinned, the toolbar stays visible while the document scrolls.
+  const [pinned, setPinned] = useState(true);
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => {
@@ -182,7 +187,12 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
   }
 
   return (
-    <div className="editor-toolbar-scroll flex items-center gap-1 overflow-x-auto rounded-xl border bg-card p-1.5 shadow-sm sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
+    <div
+      className={cn(
+        'editor-toolbar-scroll flex items-center gap-1 overflow-x-auto rounded-xl border bg-card p-1.5 shadow-sm sm:flex-wrap sm:overflow-visible [&>*]:shrink-0',
+        pinned && 'sticky top-0 z-30',
+      )}
+    >
       <Hint label="Desfazer">
         <Button
           variant="ghost"
@@ -415,6 +425,17 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
       <Separator orientation="vertical" className="mx-1 h-6" />
 
       <PageSetupDialog config={pageConfig} onChange={onPageConfigChange} />
+
+      <Hint label={pinned ? 'Desafixar barra' : 'Fixar barra'}>
+        <Toggle
+          size="sm"
+          pressed={pinned}
+          onPressedChange={setPinned}
+          aria-label="Fixar barra de ferramentas"
+        >
+          {pinned ? <Pin /> : <PinOff />}
+        </Toggle>
+      </Hint>
     </div>
   );
 }
