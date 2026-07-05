@@ -7,6 +7,7 @@ import {
   AlignJustify,
   AlignLeft,
   AlignRight,
+  AlignVerticalSpaceAround,
   Baseline,
   Bold,
   Highlighter,
@@ -28,6 +29,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -155,6 +158,7 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
               : 'left',
         fontFamily: (style.fontFamily as string) ?? 'default',
         fontSize: (style.fontSize as string) ?? 'default',
+        lineHeight: (e.getAttributes('paragraph').lineHeight as string) ?? 'default',
       };
     },
   });
@@ -321,6 +325,39 @@ export function EditorToolbar({ editor, pageConfig, onPageConfigChange, onInsert
           </ToggleGroupItem>
         </Hint>
       </ToggleGroup>
+
+      <DropdownMenu>
+        <Hint label="Espaçamento entre linhas">
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              aria-label="Espaçamento entre linhas"
+            >
+              <AlignVerticalSpaceAround />
+            </Button>
+          </DropdownMenuTrigger>
+        </Hint>
+        <DropdownMenuContent align="start">
+          <DropdownMenuRadioGroup
+            value={state.lineHeight}
+            onValueChange={(value) =>
+              value === 'default'
+                ? chain().unsetLineHeight().run()
+                : chain().setLineHeight(value).run()
+            }
+          >
+            <DropdownMenuRadioItem value="default">Padrão</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="1">1,0</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="1.15">1,15</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="1.5">1,5</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="2">2,0</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="2.5">2,5</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="3">3,0</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Separator orientation="vertical" className="mx-1 h-6" />
 
