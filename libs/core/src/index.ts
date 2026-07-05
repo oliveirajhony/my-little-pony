@@ -10,6 +10,15 @@ export {
   RegisterUser,
   SessionIssuer,
 } from './application/auth-use-cases.js';
+export {
+  CreateDocument,
+  DeleteDocument,
+  GetDocument,
+  ListDocuments,
+  PublishDocument,
+  SaveDraft,
+  UnpublishDocument,
+} from './application/document-use-cases.js';
 export type {
   Clock,
   DocumentPage,
