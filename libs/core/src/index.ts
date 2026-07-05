@@ -1,2 +1,12 @@
-// Domain + application layers (framework-free). Populated by later plans.
-export {};
+// Domain + application layers (framework-free). Consumed by apps/api adapters.
+
+export type {
+  Clock,
+  IdGenerator,
+  PasswordHasher,
+  RefreshTokenStore,
+  TokenService,
+  UserRepository,
+} from './application/ports.js';
+export { DomainError, type DomainErrorCode } from './domain/errors.js';
+export { User, type UserProps } from './domain/user.js';
