@@ -55,6 +55,15 @@
   margin-top: 0;
 }
 
+/* Placeholder shown on the current empty block. */
+.tiptap p.is-empty::before {
+  content: attr(data-placeholder);
+  color: #9aa2b1;
+  pointer-events: none;
+  height: 0;
+  float: left;
+}
+
 .tiptap p {
   margin: 0 0 0.65em;
 }
