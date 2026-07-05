@@ -19,8 +19,20 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AccessTokenGuard, type AuthUser, CurrentUser } from '../auth/access-token.guard';
+import {
+  DocumentDetailResponse,
+  DocumentListResponse,
+  DocumentSummaryResponse,
+} from './document.response';
 import { toDocumentDetail, toDocumentSummary } from './document-view';
 import { CreateDocumentDto, ListDocumentsDto, SaveDraftDto } from './documents.dto';
 
@@ -44,6 +56,7 @@ export class DocumentsController {
 
   @Get()
   @ApiOperation({ summary: 'Lista os documentos do usuário (busca + filtros)' })
+  @ApiOkResponse({ type: DocumentListResponse })
   async list(@CurrentUser() user: AuthUser, @Query() query: ListDocumentsDto) {
     const page = query.page ?? DEFAULT_PAGE;
     const limit = query.limit ?? DEFAULT_LIMIT;
@@ -65,6 +78,7 @@ export class DocumentsController {
 
   @Post()
   @ApiOperation({ summary: 'Cria um documento (rascunho)' })
+  @ApiCreatedResponse({ type: DocumentDetailResponse })
   async create(@CurrentUser() user: AuthUser, @Body() dto: CreateDocumentDto) {
     return toDocumentDetail(
       await this.createDocument.execute({ ownerId: user.id, title: dto.title }),
@@ -73,12 +87,14 @@ export class DocumentsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Documento completo (com conteúdo)' })
+  @ApiOkResponse({ type: DocumentDetailResponse })
   async get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return toDocumentDetail(await this.getDocument.execute({ id, ownerId: user.id }));
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Autosave (concorrência otimista por versão)' })
+  @ApiOkResponse({ type: DocumentDetailResponse })
   async save(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: SaveDraftDto) {
     return toDocumentDetail(
       await this.saveDraft.execute({
@@ -96,6 +112,7 @@ export class DocumentsController {
   @Post(':id/publish')
   @HttpCode(200)
   @ApiOperation({ summary: 'Publica (gera slug único e marca para indexação)' })
+  @ApiOkResponse({ type: DocumentSummaryResponse })
   async publish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return toDocumentSummary(await this.publishDocument.execute({ id, ownerId: user.id }));
   }
@@ -103,6 +120,7 @@ export class DocumentsController {
   @Post(':id/unpublish')
   @HttpCode(200)
   @ApiOperation({ summary: 'Despublica (volta a rascunho)' })
+  @ApiOkResponse({ type: DocumentSummaryResponse })
   async unpublish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return toDocumentSummary(await this.unpublishDocument.execute({ id, ownerId: user.id }));
   }
@@ -110,6 +128,7 @@ export class DocumentsController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Remove o documento' })
+  @ApiNoContentResponse()
   async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     await this.deleteDocument.execute({ id, ownerId: user.id });
   }

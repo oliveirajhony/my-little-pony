@@ -9,12 +9,13 @@ import {
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { APP_CONFIG } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
 import { toUserView } from '../users/user-view';
 import { LoginDto, RegisterDto } from './auth.dto';
+import { AccessTokenResponse, AuthResponse } from './auth.response';
 import { durationToSeconds } from './duration';
 
 const REFRESH_COOKIE = 'refresh_token';
@@ -32,6 +33,7 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Cria conta e inicia sessão' })
+  @ApiCreatedResponse({ type: AuthResponse })
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.registerUser.execute(dto);
     this.setRefreshCookie(res, result.refreshToken);
@@ -41,6 +43,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   @ApiOperation({ summary: 'Autentica e inicia sessão' })
+  @ApiOkResponse({ type: AuthResponse })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authenticate.execute(dto);
     this.setRefreshCookie(res, result.refreshToken);
@@ -50,6 +53,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(200)
   @ApiOperation({ summary: 'Renova o access token via cookie de refresh' })
+  @ApiOkResponse({ type: AccessTokenResponse })
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = req.cookies?.[REFRESH_COOKIE];
     if (!token) throw new UnauthorizedException('Sessão não encontrada. Entre novamente.');
