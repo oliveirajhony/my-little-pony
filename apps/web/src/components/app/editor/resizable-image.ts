@@ -19,6 +19,17 @@ export const ResizableImage = Image.extend({
         renderHTML: (attributes) =>
           attributes.width ? { style: `width: ${attributes.width}px` } : {},
       },
+      // Natural width/height ratio, so the node reserves its height before the
+      // image loads — keeps pagination from drifting on async loads.
+      aspect: {
+        default: null,
+        parseHTML: (element) => {
+          const value = element.getAttribute('data-aspect');
+          return value ? Number.parseFloat(value) : null;
+        },
+        renderHTML: (attributes) =>
+          attributes.aspect ? { 'data-aspect': String(attributes.aspect) } : {},
+      },
     };
   },
   addNodeView() {

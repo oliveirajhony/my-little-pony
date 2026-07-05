@@ -1,3 +1,37 @@
+/* The "desk" behind the pages, and the gap color between sheets — theme-aware so
+   the inter-page gaps blend into the desk in both light and dark mode. */
+:root {
+  --editor-desk: #e8eaef;
+}
+[data-theme="dark"] {
+  --editor-desk: #0a0f1c;
+}
+
+.editor-desk {
+  background: var(--editor-desk);
+}
+
+/* Real A4 pages (tiptap-pagination-plus). The `.rm-with-pagination` element is the
+   page-width sheet; the gaps between pages are punched through it. */
+.rm-with-pagination {
+  background: var(--page-bg, #fff);
+  /* A soft frame around the stack — the outer edges of the sheets. */
+  box-shadow:
+    0 1px 3px rgb(16 24 40 / 0.12),
+    0 0 0 1px rgb(16 24 40 / 0.05);
+}
+
+/* Match the gap to the desk (overrides the extension's inline color) and cast a
+   soft shadow onto the page edges above and below each gap, like Google Docs. */
+.rm-with-pagination .rm-pagination-gap {
+  /* biome-ignore lint/complexity/noImportantStyles: the extension sets the gap color
+     as an inline style; !important is the only way to make it theme-aware. */
+  background-color: var(--editor-desk) !important;
+  box-shadow:
+    inset 0 9px 8px -8px rgb(16 24 40 / 0.16),
+    inset 0 -9px 8px -8px rgb(16 24 40 / 0.16);
+}
+
 /* TipTap document content — the sheet is always a light page, like Google Docs. */
 .tiptap {
   outline: none;
