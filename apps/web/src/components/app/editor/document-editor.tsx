@@ -1,6 +1,7 @@
 'use client';
 
 import { Highlight } from '@tiptap/extension-highlight';
+import { Placeholder } from '@tiptap/extension-placeholder';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
@@ -42,6 +43,7 @@ export function DocumentEditor() {
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       LineHeight.configure({ types: ['heading', 'paragraph'] }),
       Highlight.configure({ multicolor: true }),
+      Placeholder.configure({ placeholder: 'Comece a escrever…' }),
       ResizableImage.configure({ inline: true, allowBase64: true }),
       // Real A4 pagination: content reflows across pages, like Word / Google Docs.
       // Size and margins are then driven by usePageConfig (single source of truth).
