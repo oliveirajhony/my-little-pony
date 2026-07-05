@@ -3,18 +3,31 @@ import {
   type DocumentPage,
   type DocumentQuery,
   type DocumentRepository,
+  DomainError,
 } from '@my-little-pony/core';
 import type { Repository } from 'typeorm';
 import { DocumentOrmEntity } from './document.orm-entity';
+import { isUniqueViolation } from './pg-unique-violation';
 
 const FTS_LANG = 'portuguese';
+
+// Partial unique index enforcing one published slug per owner (see
+// migrations/1751760000000-CreateDocuments.ts).
+const PUBLISHED_SLUG_UNIQUE_INDEX = 'documents_published_slug_idx';
 
 /** DocumentRepository port backed by TypeORM + Postgres full-text search. */
 export class TypeOrmDocumentRepository implements DocumentRepository {
   constructor(private readonly repo: Repository<DocumentOrmEntity>) {}
 
   async save(document: Document): Promise<void> {
-    await this.repo.save(this.toOrm(document));
+    try {
+      await this.repo.save(this.toOrm(document));
+    } catch (error) {
+      if (isUniqueViolation(error, PUBLISHED_SLUG_UNIQUE_INDEX)) {
+        throw new DomainError('slug-taken');
+      }
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<Document | null> {

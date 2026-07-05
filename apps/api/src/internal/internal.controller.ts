@@ -1,5 +1,13 @@
 import type { DocumentRepository } from '@my-little-pony/core';
-import { Controller, Get, Inject, NotFoundException, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiHeader, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { DOCUMENT_REPOSITORY } from '../tokens';
@@ -33,7 +41,7 @@ export class InternalController {
   @Get(':id/content')
   @ApiOperation({ summary: 'Conteúdo bruto de um documento (uso do serviço de indexação)' })
   @ApiOkResponse({ type: DocumentContentResponse })
-  async content(@Param('id') id: string): Promise<DocumentContentResponse> {
+  async content(@Param('id', ParseUUIDPipe) id: string): Promise<DocumentContentResponse> {
     const doc = await this.documents.findById(id);
     if (!doc) throw new NotFoundException('Documento não encontrado.');
     return {
