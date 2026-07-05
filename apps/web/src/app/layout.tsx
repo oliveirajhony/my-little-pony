@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono, Poppins } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { AuthProvider } from '../components/auth/auth-provider';
 import { ThemeProvider } from '../components/theme-provider';
 import '../styles/tailwind.css';
 import '../styles/tokens.css';
@@ -58,7 +59,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${poppins.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
