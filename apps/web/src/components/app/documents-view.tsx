@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { Doc, DocStatus } from '../../lib/documents-api';
 import { useDocuments } from '../../lib/documents-store';
-import type { Doc, DocStatus } from '../../lib/mock-data';
 import { DocCard } from './doc-card';
 
 type StatusFilter = 'all' | DocStatus;

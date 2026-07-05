@@ -13,9 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useAuth } from '../../lib/auth-store';
+import type { Doc } from '../../lib/documents-api';
 import { useDocumentsStore } from '../../lib/documents-store';
 import { fullDate, relativeDate } from '../../lib/format-date';
-import type { Doc } from '../../lib/mock-data';
 
 type Props = {
   doc: Doc;
@@ -25,6 +26,7 @@ type Props = {
 
 export function DocCard({ doc, activeCategories, onToggleCategory }: Props) {
   const published = doc.status === 'published';
+  const ownerId = useAuth((s) => s.user?.id);
   const removeDoc = useDocumentsStore((s) => s.removeDoc);
   const setStatus = useDocumentsStore((s) => s.setStatus);
 
@@ -65,27 +67,27 @@ export function DocCard({ doc, activeCategories, onToggleCategory }: Props) {
                 Editar
               </Link>
             </DropdownMenuItem>
-            {published && (
+            {published && ownerId && (
               <DropdownMenuItem asChild>
-                <a href={`/d/${doc.slug}`} target="_blank" rel="noopener noreferrer">
+                <a href={`/d/${ownerId}/${doc.slug}`} target="_blank" rel="noopener noreferrer">
                   <ExternalLink />
                   Ir para o site
                 </a>
               </DropdownMenuItem>
             )}
             {published ? (
-              <DropdownMenuItem onClick={() => setStatus(doc.id, 'draft')}>
+              <DropdownMenuItem onClick={() => void setStatus(doc.id, 'draft')}>
                 <PenLine />
                 Despublicar
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem onClick={() => setStatus(doc.id, 'published')}>
+              <DropdownMenuItem onClick={() => void setStatus(doc.id, 'published')}>
                 <Globe />
                 Publicar
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => removeDoc(doc.id)}>
+            <DropdownMenuItem variant="destructive" onClick={() => void removeDoc(doc.id)}>
               <Trash2 />
               Apagar
             </DropdownMenuItem>

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import type { DocStatus } from '../../../lib/mock-data';
+import type { DocStatus } from '../../../lib/documents-api';
 import { CategoryInput } from './category-input';
 
 type Props = {
