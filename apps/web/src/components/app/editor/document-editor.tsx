@@ -10,6 +10,13 @@ import { StarterKit } from '@tiptap/starter-kit';
 import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { PaginationPlus } from 'tiptap-pagination-plus';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
 import { LineHeight } from './line-height';
@@ -21,13 +28,32 @@ export type ImageMode = 'inline' | 'floating';
 
 const INITIAL_CONTENT = '<p></p>';
 
+const ZOOM_LEVELS = [
+  { value: 'fit', label: 'Ajustar' },
+  { value: '0.5', label: '50%' },
+  { value: '0.75', label: '75%' },
+  { value: '1', label: '100%' },
+  { value: '1.25', label: '125%' },
+  { value: '1.5', label: '150%' },
+];
+
+function countWords(text: string) {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
 export function DocumentEditor() {
   const [title, setTitle] = useState('');
   const [images, setImages] = useState<FloatingImageData[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // Height of the paginated flow — keeps floating images inside the document bounds.
   const [flowHeight, setFlowHeight] = useState(DEFAULT_GEOMETRY.height);
+  const [zoom, setZoom] = useState('1');
+  const [deskWidth, setDeskWidth] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+  const [wordCount, setWordCount] = useState(0);
   const nextImageId = useRef(0);
+  const deskRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -70,19 +96,41 @@ export function DocumentEditor() {
     editorProps: {
       attributes: { class: 'tiptap' },
     },
+    onCreate: ({ editor: e }) => setWordCount(countWords(e.getText())),
+    onUpdate: ({ editor: e }) => setWordCount(countWords(e.getText())),
   });
 
   const { config, updateConfig, geometry } = usePageConfig(editor);
 
-  // Measure the paginated flow so floating images can't be dragged off the document.
+  // Measure the paginated flow (floating-image bounds) and the page count.
   useEffect(() => {
     const el = editor?.view.dom as HTMLElement | undefined;
     if (!el) return;
-    const observer = new ResizeObserver(() => setFlowHeight(el.scrollHeight));
+    const measure = () => {
+      setFlowHeight(el.scrollHeight);
+      setPageCount(el.querySelector('[data-rm-pagination]')?.children.length ?? 1);
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
-    setFlowHeight(el.scrollHeight);
+    measure();
     return () => observer.disconnect();
   }, [editor]);
+
+  // Track the available desk width so "Ajustar" (fit) can size the page to it.
+  useEffect(() => {
+    const el = deskRef.current;
+    if (!el) return;
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      setDeskWidth(
+        el.clientWidth - Number.parseFloat(cs.paddingLeft) - Number.parseFloat(cs.paddingRight),
+      );
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    measure();
+    return () => observer.disconnect();
+  }, []);
 
   function insertImage(src: string, mode: ImageMode) {
     const probe = new window.Image();
@@ -116,9 +164,16 @@ export function DocumentEditor() {
     setSelectedId(null);
   }
 
+  // "Ajustar" scales the page to the desk width; otherwise use the chosen level.
+  const zoomValue =
+    zoom === 'fit' ? (deskWidth > 0 ? Math.max(0.2, deskWidth / geometry.width) : 1) : Number(zoom);
+
   const pageStyle = {
     '--page-bg': config.pageColor,
     '--page-fg': readableTextColor(config.pageColor),
+    // scale for display only — pagination still measures the unscaled layout.
+    transform: `scale(${zoomValue})`,
+    transformOrigin: 'top left',
   } as CSSProperties;
 
   return (
@@ -139,25 +194,54 @@ export function DocumentEditor() {
       />
 
       <div
+        ref={deskRef}
         className="editor-desk min-h-0 flex-1 overflow-auto rounded-xl border p-3 sm:p-6 md:p-10"
         onPointerDown={(event) => {
           if (event.target === event.currentTarget) setSelectedId(null);
         }}
       >
-        <div className="relative mx-auto w-fit" style={pageStyle}>
-          <EditorContent editor={editor} />
+        {/* Reserves the scaled footprint so the scroll area matches the zoom. */}
+        <div
+          className="mx-auto"
+          style={{ width: geometry.width * zoomValue, height: flowHeight * zoomValue }}
+        >
+          <div className="relative w-fit" style={pageStyle}>
+            <EditorContent editor={editor} />
 
-          {images.map((image) => (
-            <FloatingImage
-              key={image.id}
-              data={image}
-              selected={selectedId === image.id}
-              bounds={{ w: geometry.width, h: flowHeight }}
-              onSelect={() => setSelectedId(image.id)}
-              onChange={(patch) => updateImage(image.id, patch)}
-              onRemove={() => removeImage(image.id)}
-            />
-          ))}
+            {images.map((image) => (
+              <FloatingImage
+                key={image.id}
+                data={image}
+                selected={selectedId === image.id}
+                bounds={{ w: geometry.width, h: flowHeight }}
+                onSelect={() => setSelectedId(image.id)}
+                onChange={(patch) => updateImage(image.id, patch)}
+                onRemove={() => removeImage(image.id)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="sticky bottom-0 z-30 flex items-center justify-between gap-3 rounded-xl border bg-card px-3 py-1.5 text-muted-foreground text-xs">
+        <span>
+          {pageCount} {pageCount === 1 ? 'página' : 'páginas'} · {wordCount}{' '}
+          {wordCount === 1 ? 'palavra' : 'palavras'}
+        </span>
+        <div className="flex items-center gap-2">
+          <span>Zoom</span>
+          <Select value={zoom} onValueChange={setZoom}>
+            <SelectTrigger size="sm" className="h-7 w-[104px]" aria-label="Zoom">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ZOOM_LEVELS.map((level) => (
+                <SelectItem key={level.value} value={level.value}>
+                  {level.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>
