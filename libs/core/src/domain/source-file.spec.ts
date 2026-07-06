@@ -62,4 +62,35 @@ describe('SourceFile.create', () => {
     expect(file.isOwnedBy('u1')).toBe(true);
     expect(file.isOwnedBy('u2')).toBe(false);
   });
+
+  it('starts queued for indexing at version 1', () => {
+    const file = make();
+    expect(file.indexStatus).toBe('indexing');
+    expect(file.version).toBe(1);
+    expect(file.indexedAt).toBeNull();
+  });
+});
+
+describe('SourceFile indexing lifecycle', () => {
+  const later = new Date('2026-07-07T00:00:00.000Z');
+
+  it('marks ready with a timestamp and failed without one', () => {
+    const file = make();
+    file.setIndexStatus('ready', later);
+    expect(file.indexStatus).toBe('ready');
+    expect(file.indexedAt).toEqual(later);
+
+    file.setIndexStatus('failed', later);
+    expect(file.indexStatus).toBe('failed');
+    expect(file.indexedAt).toBeNull();
+  });
+
+  it('bumps the version and re-queues on reindex', () => {
+    const file = make();
+    file.setIndexStatus('ready', later);
+    file.requestReindex();
+    expect(file.version).toBe(2);
+    expect(file.indexStatus).toBe('indexing');
+    expect(file.indexedAt).toBeNull();
+  });
 });

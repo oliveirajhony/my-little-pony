@@ -1,4 +1,4 @@
-import type { SourceFileKind } from '@my-little-pony/core';
+import type { IndexStatus, SourceFileKind } from '@my-little-pony/core';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'source_files' })
@@ -24,4 +24,13 @@ export class SourceFileOrmEntity {
 
   @Column({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
+
+  @Column({ type: 'text', name: 'index_status', default: 'indexing' })
+  indexStatus!: IndexStatus;
+
+  @Column({ type: 'integer', default: 1 })
+  version!: number;
+
+  @Column({ type: 'timestamptz', name: 'indexed_at', nullable: true })
+  indexedAt!: Date | null;
 }

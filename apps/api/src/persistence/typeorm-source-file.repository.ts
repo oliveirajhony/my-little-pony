@@ -34,6 +34,9 @@ export class TypeOrmSourceFileRepository implements SourceFileRepository {
       // bigint chega como string do Postgres — converte de volta pra número.
       sizeBytes: Number(row.sizeBytes),
       createdAt: row.createdAt,
+      indexStatus: row.indexStatus,
+      version: row.version,
+      indexedAt: row.indexedAt,
     });
   }
 
@@ -47,6 +50,9 @@ export class TypeOrmSourceFileRepository implements SourceFileRepository {
     row.contentType = props.contentType;
     row.sizeBytes = String(props.sizeBytes);
     row.createdAt = props.createdAt;
+    row.indexStatus = props.indexStatus;
+    row.version = props.version;
+    row.indexedAt = props.indexedAt;
     return row;
   }
 }
