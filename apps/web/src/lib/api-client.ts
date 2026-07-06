@@ -6,7 +6,13 @@
  * Ambas usam `credentials: 'include'` para o cookie httpOnly de refresh.
  */
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333';
+// No navegador usa a URL pública; em Server Components (SSR) prefere a URL
+// interna (rede do Docker), pois lá `localhost` é o próprio container do web.
+const isServer = typeof window === 'undefined';
+export const API_BASE =
+  (isServer ? process.env.API_URL_INTERNAL : undefined) ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  'http://localhost:3333';
 
 export type ApiError = { status: number; code?: string; message: string };
 
