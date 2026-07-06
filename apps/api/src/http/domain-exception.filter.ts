@@ -39,6 +39,22 @@ const MAP: Record<DomainErrorCode, { status: number; message: string }> = {
     status: HttpStatus.BAD_REQUEST,
     message: 'Confira o nome, o e-mail e a mensagem.',
   },
+  'invalid-page-config': {
+    status: HttpStatus.BAD_REQUEST,
+    message: 'Confira as opções de página (papel, orientação, margens ou cores).',
+  },
+  'invalid-token-scope': {
+    status: HttpStatus.BAD_REQUEST,
+    message: 'Selecione ao menos um escopo válido para o token.',
+  },
+  'invalid-token': {
+    status: HttpStatus.UNAUTHORIZED,
+    message: 'Token de acesso inválido ou expirado.',
+  },
+  'insufficient-scope': {
+    status: HttpStatus.FORBIDDEN,
+    message: 'Este token não tem permissão para esta ação.',
+  },
 };
 
 @Catch(DomainError)

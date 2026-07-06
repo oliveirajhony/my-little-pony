@@ -14,3 +14,5 @@ export const AVATAR_STORAGE = Symbol('AvatarStorage');
 export const PDF_RENDERER = Symbol('PdfRenderer');
 export const DOCUMENT_PDF_STORAGE = Symbol('DocumentPdfStorage');
 export const EMAIL_SENDER = Symbol('EmailSender');
+export const PERSONAL_ACCESS_TOKEN_REPOSITORY = Symbol('PersonalAccessTokenRepository');
+export const ACCESS_TOKEN_GENERATOR = Symbol('AccessTokenGenerator');

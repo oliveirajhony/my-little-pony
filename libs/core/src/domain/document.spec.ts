@@ -49,6 +49,28 @@ describe('Document', () => {
     expect(doc.publishedAt).toEqual(later);
   });
 
+  it('starts with the default page config', () => {
+    const doc = Document.create({ id: 'd1', ownerId: 'u1', now });
+    expect(doc.pageConfig.paperSize).toBe('A4');
+    expect(doc.pageConfig.orientation).toBe('portrait');
+    expect(doc.pageConfig.documentTheme).toBe('light');
+  });
+
+  it('patches the page config on edit and bumps the version', () => {
+    const doc = Document.create({ id: 'd1', ownerId: 'u1', now });
+    doc.applyEdit({ pageConfig: { orientation: 'landscape', margins: { left: 1 } } }, later);
+    expect(doc.pageConfig.orientation).toBe('landscape');
+    expect(doc.pageConfig.margins.left).toBe(1);
+    expect(doc.pageConfig.margins.top).toBe(2.5);
+    expect(doc.version).toBe(1);
+  });
+
+  it('exposes page config as a copy (no external mutation)', () => {
+    const doc = Document.create({ id: 'd1', ownerId: 'u1', now });
+    doc.pageConfig.margins.top = 99;
+    expect(doc.pageConfig.margins.top).toBe(2.5);
+  });
+
   it('checks ownership', () => {
     const doc = Document.create({ id: 'd1', ownerId: 'u1', now });
     expect(doc.isOwnedBy('u1')).toBe(true);

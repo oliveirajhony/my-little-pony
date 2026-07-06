@@ -1,5 +1,6 @@
 import type { ContactMessage } from '../domain/contact-message.js';
 import { Document } from '../domain/document.js';
+import { DEFAULT_PAGE_CONFIG } from '../domain/page-config.js';
 import {
   ListContactMessages,
   MarkContactMessageRead,
@@ -31,6 +32,7 @@ class FakeDocs implements Pick<DocumentRepository, 'findPublishedBySlug'> {
       categories: [],
       indexStatus: 'none',
       version: 1,
+      pageConfig: DEFAULT_PAGE_CONFIG,
       publishedAt: clock.now(),
       createdAt: clock.now(),
       updatedAt: clock.now(),
