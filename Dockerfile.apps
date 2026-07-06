@@ -9,9 +9,11 @@ FROM node:22-bookworm-slim
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     HUSKY=0 \
     NX_DAEMON=false \
-    # Não baixar o Chromium do puppeteer; usar o do sistema (instalado abaixo).
-    PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    # Puppeteer usa o próprio Chrome (version-matched), baixado no build para este
+    # cache. O binário `chromium` do Debian crasha (SIGTRAP) neste kernel WSL2; o
+    # Chrome for Testing do Puppeteer, não. O pacote apt `chromium` (abaixo) fica
+    # só pelas libs de runtime + fontes que o Chrome precisa.
+    PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 
 # Chromium (PDF via Puppeteer) + fontes + toolchain de build para módulos nativos.
 RUN apt-get update \
@@ -40,6 +42,11 @@ RUN corepack prepare pnpm@10.33.0 --activate \
 
 # 2) Copia o restante do código-fonte (node_modules fica de fora via .dockerignore).
 COPY . .
+
+# 3) Baixa o Chrome do Puppeteer (version-matched). O pnpm ignora o postinstall do
+# puppeteer, então baixamos explicitamente para o PUPPETEER_CACHE_DIR — é daqui que
+# o renderer resolve o executável em runtime (sem PUPPETEER_EXECUTABLE_PATH).
+RUN pnpm --filter @my-little-pony/api exec puppeteer browsers install chrome
 
 # Portas: API 3333, Web 3000 (o serviço escolhe qual usar).
 EXPOSE 3333 3000
