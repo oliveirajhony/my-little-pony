@@ -11,6 +11,7 @@ type BrandMarkProps = {
  */
 export function BrandMark({ className, alt = '' }: BrandMarkProps) {
   return (
+    // biome-ignore lint/performance/noImgElement: SVG estático do /public; next/image não otimiza SVG e exigiria dimensões fixas + config extra
     <img
       src="/favicon/favicon.svg"
       alt={alt}

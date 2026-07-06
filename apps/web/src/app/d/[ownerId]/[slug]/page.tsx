@@ -42,11 +42,7 @@ export async function generateMetadata({
  * backend (`GET /public/documents/:ownerId/:slug`); slug inexistente ou de
  * rascunho cai no 404.
  */
-export default async function PublishedDocPage({
-  params,
-}: {
-  params: Promise<PageParams>;
-}) {
+export default async function PublishedDocPage({ params }: { params: Promise<PageParams> }) {
   const { ownerId, slug } = await params;
   const doc = await loadDoc(ownerId, slug);
   if (!doc) notFound();
