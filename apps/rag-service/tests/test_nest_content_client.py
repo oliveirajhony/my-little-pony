@@ -16,7 +16,7 @@ def test_fetches_descriptor_and_sends_service_auth():
     seen = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        seen["auth"] = request.headers.get("Authorization")
+        seen["auth"] = request.headers.get("X-Internal-Token")
         seen["path"] = request.url.path
         return httpx.Response(200, json={"kind": "native", "content": "<h1>Café</h1>"})
 
@@ -24,7 +24,7 @@ def test_fetches_descriptor_and_sends_service_auth():
     descriptor = client.fetch_descriptor("doc-1")
 
     assert descriptor == {"kind": "native", "content": "<h1>Café</h1>"}
-    assert seen["auth"] == "Bearer service-secret"
+    assert seen["auth"] == "service-secret"
     assert seen["path"] == "/internal/documents/doc-1/content"
 
 

@@ -1,7 +1,7 @@
 """Cliente HTTP da API interna do Nest.
 
 Contrato (Spec 1/2, §8):
-    GET /internal/documents/{id}/content   (auth de serviço via Bearer)
+    GET /internal/documents/{id}/content   (auth de serviço via X-Internal-Token)
     nativo  -> 200 { "kind": "native", "content": "<html>", "filename"?: str }
     arquivo -> 200 { "kind": "file", "storageKey": str, "filename": str }
 
@@ -22,7 +22,7 @@ class NestContentClient:
         timeout: float = 10.0,
     ) -> None:
         self._base_url = base_url.rstrip("/")
-        self._headers = {"Authorization": f"Bearer {service_token}"}
+        self._headers = {"X-Internal-Token": service_token}
         self._client = client or httpx.Client(timeout=timeout)
 
     def fetch_descriptor(self, document_id: str) -> dict:
