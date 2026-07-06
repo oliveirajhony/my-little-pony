@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { PublicDoc } from '../../lib/documents-api';
 import { fullDate, relativeDate } from '../../lib/format-date';
-import { DocIcon } from '../icons';
+import { BrandMark } from '../brand-mark';
 import { ContactForm } from './contact-form';
 import { DocActions } from './doc-actions';
 import { DocumentReader } from './document-reader';
@@ -37,9 +37,7 @@ export function PublishedDoc({ doc, ownerId }: { doc: PublicDoc; ownerId: string
             rel="noopener noreferrer"
             className="flex items-center gap-2"
           >
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <DocIcon className="size-[18px]" />
-            </span>
+            <BrandMark className="size-8" />
             <span className="font-display text-sm font-semibold tracking-tight">
               my-little-pony
             </span>
