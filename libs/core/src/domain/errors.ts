@@ -13,7 +13,13 @@ export type DomainErrorCode =
   | 'forbidden'
   | 'stale-version'
   | 'slug-taken'
-  | 'invalid-contact';
+  | 'invalid-contact'
+  | 'invalid-page-config'
+  | 'invalid-token-scope'
+  | 'invalid-token'
+  | 'insufficient-scope'
+  | 'invalid-file'
+  | 'file-not-found';
 
 export class DomainError extends Error {
   constructor(readonly code: DomainErrorCode) {

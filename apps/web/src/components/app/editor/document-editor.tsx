@@ -43,7 +43,7 @@ import { DocumentDetailsPanel } from './document-details-panel';
 import { EditorToolbar } from './editor-toolbar';
 import { FloatingImage, type FloatingImageData } from './floating-image';
 import { LineHeight } from './line-height';
-import { DEFAULT_GEOMETRY, readableTextColor } from './page-config';
+import { DEFAULT_GEOMETRY, type PageConfig, readableTextColor } from './page-config';
 import { ResizableImage } from './resizable-image';
 import { usePageConfig } from './use-page-config';
 
@@ -161,7 +161,7 @@ export function DocumentEditor() {
     setCharCount(text.replace(/\n/g, '').length);
   }
 
-  const { config, updateConfig, geometry } = usePageConfig(editor);
+  const { config, updateConfig, setConfig, geometry } = usePageConfig(editor);
 
   // Load an existing document when opened via /app/editor?id=… — fetches the
   // full detail (content + version) from the backend.
@@ -177,6 +177,19 @@ export function DocumentEditor() {
         setSlugOverride(doc.slug);
         setVersion(doc.version);
         editor.commands.setContent(doc.content || '<p></p>');
+        if (doc.pageConfig) {
+          setConfig({
+            paperSize: doc.pageConfig.paperSize as PageConfig['paperSize'],
+            orientation: doc.pageConfig.orientation,
+            pageColor: doc.pageConfig.pageColor,
+            margins: {
+              top: doc.pageConfig.margins.top,
+              bottom: doc.pageConfig.margins.bottom,
+              left: doc.pageConfig.margins.left,
+              right: doc.pageConfig.margins.right,
+            },
+          });
+        }
       })
       .catch(() => {
         // Documento inexistente ou de outro autor — volta para a lista.
@@ -185,7 +198,7 @@ export function DocumentEditor() {
     return () => {
       active = false;
     };
-  }, [editor, editingId, router]);
+  }, [editor, editingId, router, setConfig]);
 
   const slug = slugOverride ?? slugify(title);
 
@@ -209,6 +222,12 @@ export function DocumentEditor() {
         content: editor.getHTML(),
         slug,
         categories,
+        pageConfig: {
+          paperSize: config.paperSize,
+          orientation: config.orientation,
+          pageColor: config.pageColor,
+          margins: config.margins,
+        },
       });
       let summary = { ...saved };
       // Reconcilia o estado de publicação escolhido no painel de detalhes.

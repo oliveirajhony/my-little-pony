@@ -22,5 +22,6 @@ import { SearchController } from './search.controller';
         new SearchDocuments(gateway, repo),
     },
   ],
+  exports: [SearchDocuments],
 })
 export class SearchModule {}

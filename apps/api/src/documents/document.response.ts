@@ -1,4 +1,34 @@
+import {
+  DOCUMENT_THEMES,
+  PAGE_ORIENTATIONS,
+  PAPER_SIZES,
+  type PageConfig,
+} from '@my-little-pony/core';
 import { ApiProperty } from '@nestjs/swagger';
+
+class PageMarginsResponse {
+  @ApiProperty() top!: number;
+  @ApiProperty() right!: number;
+  @ApiProperty() bottom!: number;
+  @ApiProperty() left!: number;
+}
+
+export class PageConfigResponse implements PageConfig {
+  @ApiProperty({ enum: PAPER_SIZES as unknown as string[] })
+  paperSize!: PageConfig['paperSize'];
+
+  @ApiProperty({ enum: PAGE_ORIENTATIONS as unknown as string[] })
+  orientation!: PageConfig['orientation'];
+
+  @ApiProperty()
+  pageColor!: string;
+
+  @ApiProperty({ type: PageMarginsResponse })
+  margins!: PageMarginsResponse;
+
+  @ApiProperty({ enum: DOCUMENT_THEMES as unknown as string[] })
+  documentTheme!: PageConfig['documentTheme'];
+}
 
 export class DocumentSummaryResponse {
   @ApiProperty()
@@ -35,6 +65,9 @@ export class DocumentSummaryResponse {
 export class DocumentDetailResponse extends DocumentSummaryResponse {
   @ApiProperty({ description: 'HTML do editor' })
   content!: string;
+
+  @ApiProperty({ type: PageConfigResponse })
+  pageConfig!: PageConfigResponse;
 }
 
 export class DocumentListResponse {

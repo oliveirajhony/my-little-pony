@@ -126,6 +126,7 @@ export class DocumentsController {
         content: dto.content,
         slug: dto.slug,
         categories: dto.categories,
+        pageConfig: dto.pageConfig,
       }),
     );
     // Keep the public page fresh when a published document is edited.
