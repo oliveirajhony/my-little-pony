@@ -1,5 +1,5 @@
 import type { SVGProps } from 'react';
-import { DocIcon } from '../icons';
+import { BrandMark } from '../brand-mark';
 
 function GithubIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -25,9 +25,7 @@ export function PublishedFooter() {
   return (
     <footer className="border-t bg-card/40">
       <div className="mx-auto max-w-3xl px-6 py-12 text-center">
-        <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <DocIcon className="size-5" />
-        </span>
+        <BrandMark className="inline-block size-9" />
         <p className="mt-4 text-sm text-muted-foreground">
           Feito com{' '}
           <a
