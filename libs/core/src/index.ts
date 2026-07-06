@@ -35,7 +35,17 @@ export {
   SaveDraft,
   UnpublishDocument,
 } from './application/document-use-cases.js';
+export {
+  AuthenticatePersonalAccessToken,
+  type CreatedAccessToken,
+  CreatePersonalAccessToken,
+  ListPersonalAccessTokens,
+  PurgeExpiredTokens,
+  RevokePersonalAccessToken,
+  UpdatePersonalAccessToken,
+} from './application/pat-use-cases.js';
 export type {
+  AccessTokenGenerator,
   AvatarStorage,
   CacheStore,
   Clock,
@@ -50,9 +60,11 @@ export type {
   DocumentRepository,
   EmailSender,
   EventPublisher,
+  GeneratedAccessToken,
   IdGenerator,
   PasswordHasher,
   PdfRenderer,
+  PersonalAccessTokenRepository,
   RefreshTokenStore,
   SearchGateway,
   SearchHit,
@@ -77,4 +89,24 @@ export {
   type IndexStatus,
 } from './domain/document.js';
 export { DomainError, type DomainErrorCode } from './domain/errors.js';
+export {
+  clonePageConfig,
+  DEFAULT_PAGE_CONFIG,
+  DOCUMENT_THEMES,
+  type DocumentTheme,
+  mergePageConfig,
+  PAGE_ORIENTATIONS,
+  PAPER_SIZES,
+  type PageConfig,
+  type PageConfigPatch,
+  type PageMargins,
+  type PageOrientation,
+  type PaperSize,
+} from './domain/page-config.js';
+export {
+  PAT_SCOPES,
+  type PatScope,
+  PersonalAccessToken,
+  type PersonalAccessTokenProps,
+} from './domain/personal-access-token.js';
 export { User, type UserProps } from './domain/user.js';

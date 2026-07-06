@@ -1,5 +1,6 @@
 import type { ContactMessage } from '../domain/contact-message.js';
 import type { Document, DocumentStatus } from '../domain/document.js';
+import type { PersonalAccessToken } from '../domain/personal-access-token.js';
 import type { User } from '../domain/user.js';
 
 /** Hashes and verifies plaintext passwords (Argon2id adapter in apps/api). */
@@ -102,6 +103,31 @@ export interface TokenService {
 
 export interface IdGenerator {
   next(): string;
+}
+
+/** Persistence for Personal Access Tokens (TypeORM adapter in apps/api). */
+export interface PersonalAccessTokenRepository {
+  save(token: PersonalAccessToken): Promise<void>;
+  /** Looks a token up by the SHA-256 hash of its raw value. */
+  findByHash(tokenHash: string): Promise<PersonalAccessToken | null>;
+  findById(id: string): Promise<PersonalAccessToken | null>;
+  /** Owner's non-revoked tokens, newest first. */
+  listActiveByOwner(ownerId: string): Promise<PersonalAccessToken[]>;
+  /** Removes tokens whose expiry is at or before `now`. Returns how many were deleted. */
+  deleteExpired(now: Date): Promise<number>;
+}
+
+/** A freshly generated opaque token: the raw secret, a display prefix and its hash. */
+export type GeneratedAccessToken = { raw: string; prefix: string; hash: string };
+
+/**
+ * Generates and hashes Personal Access Tokens. The raw value is high-entropy,
+ * so a fast SHA-256 (not Argon2) is used for O(1) lookup. Adapter: node:crypto.
+ */
+export interface AccessTokenGenerator {
+  generate(): GeneratedAccessToken;
+  /** Hashes a raw token the same way, for lookup on authentication. */
+  hash(raw: string): string;
 }
 
 /** A single stored avatar: raw bytes plus the MIME type to serve it with. */

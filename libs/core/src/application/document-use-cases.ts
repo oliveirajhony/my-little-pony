@@ -1,5 +1,6 @@
 import { Document, type IndexStatus } from '../domain/document.js';
 import { DomainError } from '../domain/errors.js';
+import type { PageConfigPatch } from '../domain/page-config.js';
 import type {
   CacheStore,
   Clock,
@@ -80,6 +81,7 @@ export class SaveDraft {
     content?: string;
     slug?: string;
     categories?: string[];
+    pageConfig?: PageConfigPatch;
   }): Promise<Document> {
     const doc = await loadOwned(this.repo, input.id, input.ownerId);
     // Optimistic concurrency: reject a save built on a stale version.
@@ -90,6 +92,7 @@ export class SaveDraft {
         content: input.content,
         slug: input.slug,
         categories: input.categories,
+        pageConfig: input.pageConfig,
       },
       this.clock.now(),
     );

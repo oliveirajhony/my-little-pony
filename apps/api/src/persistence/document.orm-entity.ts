@@ -1,3 +1,4 @@
+import type { PageConfig } from '@my-little-pony/core';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'documents' })
@@ -32,6 +33,9 @@ export class DocumentOrmEntity {
 
   @Column({ type: 'int' })
   version!: number;
+
+  @Column({ type: 'jsonb', name: 'page_config', nullable: true })
+  pageConfig!: PageConfig | null;
 
   @Column({ type: 'text', name: 'storage_key', nullable: true })
   storageKey!: string | null;

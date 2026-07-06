@@ -1,6 +1,5 @@
 'use client';
 
-import { Check } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { asApiError } from '../../../lib/api-client';
 import { useAuth } from '../../../lib/auth-store';
 import { AvatarDialog } from './avatar-dialog';
+import { SettingsFormFooter } from './settings-form-footer';
 
 function initialsOf(name: string): string {
   const parts = name.split(' ').filter(Boolean).slice(0, 2);
@@ -111,16 +111,12 @@ export function ProfileForm() {
           </div>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <div className="flex items-center justify-end gap-3">
-          {status === 'saved' && (
-            <span className="flex items-center gap-1 text-sm text-primary">
-              <Check className="size-4" /> Salvo
-            </span>
-          )}
-          <Button type="submit" disabled={status === 'saving'}>
-            {status === 'saving' && !pwdOpen ? 'Salvando…' : 'Salvar alterações'}
-          </Button>
-        </div>
+        <SettingsFormFooter
+          saving={status === 'saving' && !pwdOpen}
+          saved={status === 'saved'}
+          label="Salvar alterações"
+          savingLabel="Salvando…"
+        />
       </form>
 
       <Dialog
