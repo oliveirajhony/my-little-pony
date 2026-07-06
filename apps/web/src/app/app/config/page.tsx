@@ -2,6 +2,7 @@ import { KeyboardShortcuts } from '../../../components/app/settings/keyboard-sho
 import { PasswordForm } from '../../../components/app/settings/password-form';
 import { ProfileForm } from '../../../components/app/settings/profile-form';
 import { SettingsSection } from '../../../components/app/settings/settings-section';
+import { TokensSection } from '../../../components/app/settings/tokens-section';
 
 export default function SettingsPage() {
   return (
@@ -18,6 +19,13 @@ export default function SettingsPage() {
 
         <SettingsSection title="Senha" description="Use uma senha longa e única para esta conta.">
           <PasswordForm />
+        </SettingsSection>
+
+        <SettingsSection
+          title="Tokens de acesso"
+          description="Credenciais para agentes externos operarem sua conta pelo servidor MCP."
+        >
+          <TokensSection />
         </SettingsSection>
 
         <SettingsSection

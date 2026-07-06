@@ -24,5 +24,5 @@ export function usePageConfig(editor: Editor | null) {
 
   const updateConfig = (patch: Partial<PageConfig>) => setConfig((prev) => ({ ...prev, ...patch }));
 
-  return { config, updateConfig, geometry };
+  return { config, updateConfig, setConfig, geometry };
 }

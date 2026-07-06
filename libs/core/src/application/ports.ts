@@ -1,5 +1,7 @@
 import type { ContactMessage } from '../domain/contact-message.js';
 import type { Document, DocumentStatus } from '../domain/document.js';
+import type { PersonalAccessToken } from '../domain/personal-access-token.js';
+import type { SourceFile } from '../domain/source-file.js';
 import type { User } from '../domain/user.js';
 
 /** Hashes and verifies plaintext passwords (Argon2id adapter in apps/api). */
@@ -104,6 +106,31 @@ export interface IdGenerator {
   next(): string;
 }
 
+/** Persistence for Personal Access Tokens (TypeORM adapter in apps/api). */
+export interface PersonalAccessTokenRepository {
+  save(token: PersonalAccessToken): Promise<void>;
+  /** Looks a token up by the SHA-256 hash of its raw value. */
+  findByHash(tokenHash: string): Promise<PersonalAccessToken | null>;
+  findById(id: string): Promise<PersonalAccessToken | null>;
+  /** Owner's non-revoked tokens, newest first. */
+  listActiveByOwner(ownerId: string): Promise<PersonalAccessToken[]>;
+  /** Removes tokens whose expiry is at or before `now`. Returns how many were deleted. */
+  deleteExpired(now: Date): Promise<number>;
+}
+
+/** A freshly generated opaque token: the raw secret, a display prefix and its hash. */
+export type GeneratedAccessToken = { raw: string; prefix: string; hash: string };
+
+/**
+ * Generates and hashes Personal Access Tokens. The raw value is high-entropy,
+ * so a fast SHA-256 (not Argon2) is used for O(1) lookup. Adapter: node:crypto.
+ */
+export interface AccessTokenGenerator {
+  generate(): GeneratedAccessToken;
+  /** Hashes a raw token the same way, for lookup on authentication. */
+  hash(raw: string): string;
+}
+
 /** A single stored avatar: raw bytes plus the MIME type to serve it with. */
 export interface StoredAvatar {
   data: Uint8Array;
@@ -131,4 +158,31 @@ export interface DocumentPdfStorage {
 
 export interface Clock {
   now(): Date;
+}
+
+/** Persistência dos metadados dos documentos-fonte (adapter TypeORM). */
+export interface SourceFileRepository {
+  save(file: SourceFile): Promise<void>;
+  findById(id: string): Promise<SourceFile | null>;
+  delete(id: string): Promise<void>;
+  /** Arquivos de um autor, mais recentes primeiro. */
+  listByOwner(ownerId: string): Promise<SourceFile[]>;
+}
+
+/** Um blob de documento-fonte: bytes + MIME para servir na pré-visualização. */
+export interface StoredSourceFile {
+  data: Uint8Array;
+  contentType: string;
+}
+
+/** Bytes dos documentos-fonte, endereçados por owner + id (adapter: MinIO). */
+export interface SourceFileStorage {
+  put(input: {
+    ownerId: string;
+    fileId: string;
+    data: Uint8Array;
+    contentType: string;
+  }): Promise<void>;
+  get(input: { ownerId: string; fileId: string }): Promise<StoredSourceFile | null>;
+  remove(input: { ownerId: string; fileId: string }): Promise<void>;
 }

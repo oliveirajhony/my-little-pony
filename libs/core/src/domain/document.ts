@@ -1,3 +1,11 @@
+import {
+  clonePageConfig,
+  DEFAULT_PAGE_CONFIG,
+  mergePageConfig,
+  type PageConfig,
+  type PageConfigPatch,
+} from './page-config.js';
+
 export type DocumentStatus = 'draft' | 'published';
 export type IndexStatus = 'none' | 'indexing' | 'ready' | 'failed';
 
@@ -12,6 +20,7 @@ export type DocumentProps = {
   categories: string[];
   indexStatus: IndexStatus;
   version: number;
+  pageConfig: PageConfig;
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -70,6 +79,7 @@ export class Document {
       categories: [],
       indexStatus: 'none',
       version: 0,
+      pageConfig: clonePageConfig(DEFAULT_PAGE_CONFIG),
       publishedAt: null,
       createdAt: input.now,
       updatedAt: input.now,
@@ -78,7 +88,13 @@ export class Document {
 
   /** Applies an autosave edit and bumps the version. */
   applyEdit(
-    input: { title?: string; content?: string; slug?: string; categories?: string[] },
+    input: {
+      title?: string;
+      content?: string;
+      slug?: string;
+      categories?: string[];
+      pageConfig?: PageConfigPatch;
+    },
     now: Date,
   ): void {
     if (input.title !== undefined) this.props.title = input.title.trim() || DEFAULT_TITLE;
@@ -88,6 +104,9 @@ export class Document {
     }
     if (input.slug !== undefined) this.props.slug = Document.slugify(input.slug);
     if (input.categories !== undefined) this.props.categories = input.categories;
+    if (input.pageConfig !== undefined) {
+      this.props.pageConfig = mergePageConfig(this.props.pageConfig, input.pageConfig);
+    }
     this.props.version += 1;
     this.props.updatedAt = now;
   }
@@ -150,6 +169,9 @@ export class Document {
   get version(): number {
     return this.props.version;
   }
+  get pageConfig(): PageConfig {
+    return clonePageConfig(this.props.pageConfig);
+  }
   get publishedAt(): Date | null {
     return this.props.publishedAt;
   }
@@ -158,6 +180,10 @@ export class Document {
   }
 
   toProps(): DocumentProps {
-    return { ...this.props, categories: [...this.props.categories] };
+    return {
+      ...this.props,
+      categories: [...this.props.categories],
+      pageConfig: clonePageConfig(this.props.pageConfig),
+    };
   }
 }

@@ -2,7 +2,7 @@
 
 import { FileText, Search, SquarePlus, X } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Doc, DocStatus } from '../../lib/documents-api';
 import { useDocuments } from '../../lib/documents-store';
 import { DocCard } from './doc-card';
+import { PaginationBar } from './pagination-bar';
 
 type StatusFilter = 'all' | DocStatus;
+
+const PAGE_SIZES = [9, 18, 36];
 
 function byNewest(a: Doc, b: Doc) {
   return b.updatedAt.localeCompare(a.updatedAt);
@@ -22,6 +25,8 @@ export function DocumentsView() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
 
   const counts = useMemo(
     () => ({
@@ -46,6 +51,17 @@ export function DocumentsView() {
       )
       .sort(byNewest);
   }, [documents, query, status, activeCategories]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  // Volta pra página 1 quando os filtros mudam.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset ao filtrar
+  useEffect(() => setPage(1), [query, status, activeCategories, pageSize]);
+  // Não deixa a página passar do total (ex.: após apagar/despublicar).
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   function toggleCategory(category: string) {
     setActiveCategories((prev) =>
@@ -145,16 +161,26 @@ export function DocumentsView() {
           }
         />
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((doc) => (
-            <DocCard
-              key={doc.id}
-              doc={doc}
-              activeCategories={activeCategories}
-              onToggleCategory={toggleCategory}
-            />
-          ))}
-        </div>
+        <>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {paged.map((doc) => (
+              <DocCard
+                key={doc.id}
+                doc={doc}
+                activeCategories={activeCategories}
+                onToggleCategory={toggleCategory}
+              />
+            ))}
+          </div>
+          <PaginationBar
+            page={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={PAGE_SIZES}
+          />
+        </>
       )}
     </div>
   );

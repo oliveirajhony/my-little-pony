@@ -25,8 +25,17 @@ export type DocSummary = {
   updatedAt: string;
 };
 
-/** Documento completo (editor) — inclui o HTML. */
-export type DocDetail = DocSummary & { content: string };
+/** Configuração de página/tema persistida do documento (espelha o backend). */
+export type PageConfigDto = {
+  paperSize: string;
+  orientation: 'portrait' | 'landscape';
+  pageColor: string;
+  margins: { top: number; right: number; bottom: number; left: number };
+  documentTheme: 'light' | 'dark' | 'system';
+};
+
+/** Documento completo (editor) — inclui o HTML e a configuração de página. */
+export type DocDetail = DocSummary & { content: string; pageConfig: PageConfigDto };
 
 /**
  * Forma usada pela UI da área logada (cards + editor). O conteúdo é opcional
@@ -73,6 +82,7 @@ export type SaveDocumentInput = {
   content?: string;
   slug?: string;
   categories?: string[];
+  pageConfig?: Partial<PageConfigDto>;
 };
 
 /** Autosave com concorrência otimista por versão. */
