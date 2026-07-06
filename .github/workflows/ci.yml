@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  # Projetos Node (api, web, core, contracts) + lint/format do repo inteiro.
+  node:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,4 +31,31 @@ jobs:
         run: pnpm exec biome ci .
 
       - name: Typecheck, test & build
-        run: pnpm exec nx run-many -t typecheck test build
+        run: pnpm exec nx run-many -t typecheck test build --exclude rag-service
+
+  # Serviço Python (rag-service): deps de ML pesadas, então roda isolado, com
+  # cache de pip. Chama ruff/pytest direto (sem o venv do target nx, que é p/ dev).
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/rag-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/rag-service/requirements.txt
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Test (pytest, unit only)
+        run: pytest -m "not integration"
