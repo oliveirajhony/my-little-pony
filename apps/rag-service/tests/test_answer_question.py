@@ -65,12 +65,28 @@ def test_generates_answer_grounded_in_relevant_sources():
     assert all(s.document_id == "doc-1" for s in result.sources)
 
 
-def test_no_relevant_chunk_returns_not_found_without_calling_llm():
+def test_falls_back_to_best_candidate_when_none_clear_threshold():
+    # Pergunta conversacional: nenhum trecho cruza o limiar, mas o dono TEM docs.
+    # Em vez de recusar (falso negativo), responde a partir do melhor candidato;
+    # a anti-alucinação fica a cargo do system prompt do LLM.
     index = _index_with("assunto totalmente diferente")
     generator = FakeAnswerGenerator()
     use_case = _use_case(index, generator, min_score=0.5)
 
     result = use_case.execute(SearchQuery(query="xyz inexistente", owner_id="o"))
+
+    assert result.grounded is True
+    assert len(generator.calls) == 1  # LLM chamado a partir do candidato recuperado
+    assert result.sources
+
+
+def test_no_candidate_at_all_returns_not_found_without_calling_llm():
+    # Contexto realmente vazio (dono sem docs): recusa sem chamar o LLM.
+    index = _index_with("origem do café", owner_id="outro")
+    generator = FakeAnswerGenerator()
+    use_case = _use_case(index, generator, min_score=0.5)
+
+    result = use_case.execute(SearchQuery(query="origem do café", owner_id="o"))
 
     assert result.grounded is False
     assert result.sources == []

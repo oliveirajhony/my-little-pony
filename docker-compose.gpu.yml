@@ -1,0 +1,47 @@
+# Overlay opcional de GPU (NVIDIA) — commitado, DESLIGADO por padrão.
+#
+# O docker-compose.yml roda tudo em CPU para ser portável (Mac, AMD, CPU-only).
+# Este overlay expõe a GPU NVIDIA aos containers do RAG. É opt-in: só tem efeito
+# quando você o passa explicitamente com -f.
+#
+# Pré-requisitos (host/WSL): GPU NVIDIA + driver, e o NVIDIA Container Toolkit
+# instalado (para o Docker enxergar a GPU).
+#
+# Uso:
+#   # LLM (Ollama) na GPU; embedders/reranker seguem em CPU (default):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile rag up -d
+#
+#   # Também colocar embedders/reranker na GPU (cuidado com a VRAM):
+#   MLP_RAG_DEVICE=cuda docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile rag up -d
+#
+# Nota de VRAM: o LLM 7B + duas cópias dos embedders (worker e api) podem não
+# caber juntos em placas de ~8 GB. Em GPUs menores, prefira só o Ollama na GPU
+# (deixe MLP_RAG_DEVICE=cpu).
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  rag-worker:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  rag-api:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

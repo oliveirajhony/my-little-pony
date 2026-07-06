@@ -15,10 +15,11 @@ from rag_service.adapters.outbound.minio_blob_storage import MinioBlobStorage
 from rag_service.adapters.outbound.nest_content_client import NestContentClient
 from rag_service.adapters.outbound.nest_document_source import NestDocumentSource
 from rag_service.adapters.outbound.ollama_answer_generator import OllamaAnswerGenerator
+from rag_service.adapters.outbound.openai_answer_generator import OpenAiAnswerGenerator
 from rag_service.adapters.outbound.qdrant_index import QdrantServerIndex
 from rag_service.adapters.outbound.rabbit_publisher import RabbitEventPublisher
 from rag_service.adapters.outbound.tei_dense_embedder import TeiDenseEmbedder
-from rag_service.application.ports import DenseEmbedder
+from rag_service.application.ports import AnswerGenerator, DenseEmbedder
 from rag_service.application.use_cases import (
     AnswerQuestion,
     DeindexDocument,
@@ -38,7 +39,7 @@ class Composition:
         self._chunker: DoclingChunker | None = None
         self._source: NestDocumentSource | None = None
         self._publisher: RabbitEventPublisher | None = None
-        self._answer_generator: OllamaAnswerGenerator | None = None
+        self._answer_generator: AnswerGenerator | None = None
 
     # --- adapters (singletons preguiçosos) --- #
     def dense(self) -> DenseEmbedder:
@@ -94,13 +95,23 @@ class Composition:
             )
         return self._publisher
 
-    def answer_generator(self) -> OllamaAnswerGenerator:
+    def answer_generator(self) -> AnswerGenerator:
         if self._answer_generator is None:
-            self._answer_generator = OllamaAnswerGenerator(
-                url=self._s.ollama_url,
-                model=self._s.llm_model,
-                timeout=self._s.ollama_timeout,
-            )
+            if self._s.llm_backend == "openai":
+                # API hospedada ou compatível (OpenAI, Groq, OpenRouter, vLLM...).
+                self._answer_generator = OpenAiAnswerGenerator(
+                    base_url=self._s.llm_api_base,
+                    model=self._s.llm_model,
+                    api_key=self._s.llm_api_key,
+                    timeout=self._s.llm_api_timeout,
+                )
+            else:
+                # Default: LLM local via Ollama.
+                self._answer_generator = OllamaAnswerGenerator(
+                    url=self._s.ollama_url,
+                    model=self._s.llm_model,
+                    timeout=self._s.ollama_timeout,
+                )
         return self._answer_generator
 
     # --- casos de uso --- #
