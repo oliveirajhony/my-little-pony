@@ -12,7 +12,8 @@ export type DomainErrorCode =
   | 'document-not-found'
   | 'forbidden'
   | 'stale-version'
-  | 'slug-taken';
+  | 'slug-taken'
+  | 'invalid-contact';
 
 export class DomainError extends Error {
   constructor(readonly code: DomainErrorCode) {

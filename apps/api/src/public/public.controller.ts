@@ -1,4 +1,9 @@
-import { type EventPublisher, GetDocumentPdf, GetPublicDocument } from '@my-little-pony/core';
+import {
+  type EventPublisher,
+  GetDocumentPdf,
+  GetPublicDocument,
+  SubmitContactMessage,
+} from '@my-little-pony/core';
 import {
   Body,
   Controller,
@@ -15,7 +20,7 @@ import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagg
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { EVENT_PUBLISHER } from '../tokens';
-import { EmailDocumentDto } from './public.dto';
+import { ContactMessageDto, EmailDocumentDto } from './public.dto';
 
 export class PublicDocumentResponse {
   @ApiProperty()
@@ -47,6 +52,7 @@ export class PublicController {
   constructor(
     private readonly getPublicDocument: GetPublicDocument,
     private readonly getDocumentPdf: GetDocumentPdf,
+    private readonly submitContact: SubmitContactMessage,
     @Inject(EVENT_PUBLISHER) private readonly events: EventPublisher,
   ) {}
 
@@ -94,5 +100,26 @@ export class PublicController {
     await this.getPublicDocument.execute(ownerId, slug);
     await this.events.documentPdfEmailRequested({ ownerId, slug, recipient: dto.email });
     return { status: 'queued' };
+  }
+
+  @Post(':ownerId/:slug/contact')
+  @HttpCode(202)
+  // Endpoint anônimo — limite apertado contra spam.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Envia uma mensagem ao autor do documento' })
+  async contact(
+    @Param('ownerId', new ParseUUIDPipe({ exceptionFactory: () => new NotFoundException() }))
+    ownerId: string,
+    @Param('slug') slug: string,
+    @Body() dto: ContactMessageDto,
+  ): Promise<{ status: string }> {
+    await this.submitContact.execute({
+      ownerId,
+      slug,
+      fromName: dto.name,
+      fromEmail: dto.email,
+      message: dto.message,
+    });
+    return { status: 'received' };
   }
 }

@@ -8,6 +8,7 @@ import { HealthController } from '../health/health.controller';
 import { DomainExceptionFilter } from '../http/domain-exception.filter';
 import { InternalModule } from '../internal/internal.module';
 import { MailModule } from '../mail/mail.module';
+import { MessagesModule } from '../messages/messages.module';
 import { MessagingModule } from '../messaging/messaging.module';
 import { PdfModule } from '../pdf/pdf.module';
 import { PersistenceModule } from '../persistence/persistence.module';
@@ -35,6 +36,7 @@ import { UsersModule } from '../users/users.module';
     PublicModule,
     SearchModule,
     InternalModule,
+    MessagesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_FILTER, useClass: DomainExceptionFilter }],
