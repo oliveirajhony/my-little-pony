@@ -1,6 +1,7 @@
 import {
   type Clock,
   DeleteSourceFile,
+  type EventPublisher,
   GetSourceFileContent,
   type IdGenerator,
   ImportSourceFile,
@@ -9,7 +10,13 @@ import {
   type SourceFileStorage,
 } from '@my-little-pony/core';
 import { Module } from '@nestjs/common';
-import { CLOCK, ID_GENERATOR, SOURCE_FILE_REPOSITORY, SOURCE_FILE_STORAGE } from '../tokens';
+import {
+  CLOCK,
+  EVENT_PUBLISHER,
+  ID_GENERATOR,
+  SOURCE_FILE_REPOSITORY,
+  SOURCE_FILE_STORAGE,
+} from '../tokens';
 import { SourceFilesController } from './source-files.controller';
 
 @Module({
@@ -17,13 +24,14 @@ import { SourceFilesController } from './source-files.controller';
   providers: [
     {
       provide: ImportSourceFile,
-      inject: [SOURCE_FILE_REPOSITORY, SOURCE_FILE_STORAGE, ID_GENERATOR, CLOCK],
+      inject: [SOURCE_FILE_REPOSITORY, SOURCE_FILE_STORAGE, ID_GENERATOR, CLOCK, EVENT_PUBLISHER],
       useFactory: (
         repo: SourceFileRepository,
         storage: SourceFileStorage,
         ids: IdGenerator,
         clock: Clock,
-      ) => new ImportSourceFile(repo, storage, ids, clock),
+        events: EventPublisher,
+      ) => new ImportSourceFile(repo, storage, ids, clock, events),
     },
     {
       provide: ListSourceFiles,
@@ -38,9 +46,12 @@ import { SourceFilesController } from './source-files.controller';
     },
     {
       provide: DeleteSourceFile,
-      inject: [SOURCE_FILE_REPOSITORY, SOURCE_FILE_STORAGE],
-      useFactory: (repo: SourceFileRepository, storage: SourceFileStorage) =>
-        new DeleteSourceFile(repo, storage),
+      inject: [SOURCE_FILE_REPOSITORY, SOURCE_FILE_STORAGE, EVENT_PUBLISHER],
+      useFactory: (
+        repo: SourceFileRepository,
+        storage: SourceFileStorage,
+        events: EventPublisher,
+      ) => new DeleteSourceFile(repo, storage, events),
     },
   ],
 })

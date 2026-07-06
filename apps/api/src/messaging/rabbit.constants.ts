@@ -1,6 +1,8 @@
 // Topology shared with the Python indexing service (Spec 2). Keep in sync.
 export const DOCUMENTS_EXCHANGE = 'mlp.documents';
 export const RK_INDEX_REQUESTED = 'document.index.requested';
+// De-index: emitted when an indexable source is deleted; drops its vectors.
+export const RK_DEINDEX_REQUESTED = 'document.deindex.requested';
 export const RK_INDEX_COMPLETED = 'document.index.completed';
 // Queue the Nest API consumes: completion events published by the Python worker.
 export const INDEX_COMPLETED_QUEUE = 'mlp.index.completed';

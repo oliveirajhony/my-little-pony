@@ -40,6 +40,23 @@ export interface DocumentRepository {
 /** Emitted when a published document needs (re)indexing by the Python service. */
 export type DocumentIndexRequested = { documentId: string; ownerId: string; version: number };
 
+/**
+ * Fonte indexável: documento nativo (HTML do editor) ou arquivo importado
+ * (bytes no MinIO). O worker Python usa o `kind` para resolver o descriptor.
+ */
+export type SourceKind = 'native' | 'file';
+
+/** Emitted when an indexable source (document or file) needs (re)indexing. */
+export type IndexRequested = {
+  documentId: string;
+  ownerId: string;
+  version: number;
+  kind: SourceKind;
+};
+
+/** Emitted when an indexable source is removed and its vectors must be dropped. */
+export type DeindexRequested = { documentId: string; ownerId: string; kind: SourceKind };
+
 /** Emitted when a published document needs its PDF (re)generated. */
 export type DocumentPdfRequested = { documentId: string; ownerId: string };
 
@@ -48,7 +65,8 @@ export type DocumentPdfEmailRequested = { ownerId: string; slug: string; recipie
 
 /** Outbound port to the message broker (RabbitMQ adapter). */
 export interface EventPublisher {
-  documentIndexRequested(event: DocumentIndexRequested): Promise<void>;
+  indexRequested(event: IndexRequested): Promise<void>;
+  deindexRequested(event: DeindexRequested): Promise<void>;
   documentPdfRequested(event: DocumentPdfRequested): Promise<void>;
   documentPdfEmailRequested(event: DocumentPdfEmailRequested): Promise<void>;
 }
