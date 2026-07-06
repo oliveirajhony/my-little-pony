@@ -4,10 +4,10 @@
  *
  * - Rotas autenticadas (`/documents/*`) usam `apiFetch` (Bearer + refresh no 401).
  * - A leitura pública (`/public/documents/:ownerId/:slug`) é anônima e roda no
- *   servidor (SSR), então usa `fetch` direto na `API_BASE`.
+ *   servidor (SSR), então usa `fetch` direto na `API_INTERNAL_BASE` (rede Docker).
  */
 
-import { API_BASE, apiFetch } from './api-client';
+import { API_INTERNAL_BASE, apiFetch } from './api-client';
 
 export type DocStatus = 'draft' | 'published';
 
@@ -113,7 +113,7 @@ export function unpublishDocument(id: string): Promise<DocSummary> {
  */
 export async function getPublicDocument(ownerId: string, slug: string): Promise<PublicDoc | null> {
   const res = await fetch(
-    `${API_BASE}/public/documents/${encodeURIComponent(ownerId)}/${encodeURIComponent(slug)}`,
+    `${API_INTERNAL_BASE}/public/documents/${encodeURIComponent(ownerId)}/${encodeURIComponent(slug)}`,
     { cache: 'no-store' },
   );
   if (!res.ok) return null;
