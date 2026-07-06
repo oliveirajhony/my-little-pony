@@ -2,18 +2,15 @@ import {
   type Clock,
   type DocumentPdfStorage,
   type DocumentRepository,
-  type EmailSender,
   GenerateDocumentPdf,
   MarkDocumentIndexed,
   type PdfRenderer,
-  SendDocumentPdfEmail,
 } from '@my-little-pony/core';
 import { Global, Module } from '@nestjs/common';
 import {
   CLOCK,
   DOCUMENT_PDF_STORAGE,
   DOCUMENT_REPOSITORY,
-  EMAIL_SENDER,
   EVENT_PUBLISHER,
   PDF_RENDERER,
 } from '../tokens';
@@ -36,11 +33,6 @@ import { RabbitEventPublisher } from './rabbit-event-publisher';
       provide: EVENT_PUBLISHER,
       inject: [RabbitConnection],
       useFactory: (connection: RabbitConnection) => new RabbitEventPublisher(connection),
-    },
-    {
-      provide: SendDocumentPdfEmail,
-      inject: [EMAIL_SENDER],
-      useFactory: (mailer: EmailSender) => new SendDocumentPdfEmail(mailer),
     },
     {
       provide: MarkDocumentIndexed,
