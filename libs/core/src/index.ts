@@ -91,6 +91,7 @@ export {
   GetSourceFileContent,
   ImportSourceFile,
   ListSourceFiles,
+  MarkSourceFileIndexed,
 } from './application/source-file-use-cases.js';
 export { ContactMessage, type ContactMessageProps } from './domain/contact-message.js';
 export {

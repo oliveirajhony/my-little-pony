@@ -1,3 +1,4 @@
+import type { IndexStatus } from '../domain/document.js';
 import { DomainError } from '../domain/errors.js';
 import { SourceFile } from '../domain/source-file.js';
 import type {
@@ -88,6 +89,24 @@ export class GetSourceFileContent {
     const content = await this.storage.get({ ownerId: file.ownerId, fileId: file.id });
     if (!content) throw new DomainError('file-not-found');
     return { filename: file.filename, content };
+  }
+}
+
+/**
+ * Aplica o resultado do pipeline de indexação a um arquivo (vindo da fila).
+ * System-level: sem checagem de dono. Arquivo removido no meio é ignorado.
+ */
+export class MarkSourceFileIndexed {
+  constructor(
+    private readonly repo: SourceFileRepository,
+    private readonly clock: Clock,
+  ) {}
+
+  async execute(input: { id: string; status: IndexStatus }): Promise<void> {
+    const file = await this.repo.findById(input.id);
+    if (!file) return;
+    file.setIndexStatus(input.status, this.clock.now());
+    await this.repo.save(file);
   }
 }
 
