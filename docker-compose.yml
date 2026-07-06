@@ -163,7 +163,8 @@ services:
 
   # LLM local para o RAG generativo (/answer). Puxe o modelo uma vez:
   #   docker compose --profile rag exec ollama ollama pull qwen2.5:7b-instruct
-  # Sem GPU roda em CPU (mais lento); com GPU, descomente o bloco `deploy`.
+  # Sem GPU roda em CPU (mais lento); para GPU, veja docker-compose.gpu.yml.
+  # (Alternativa: use uma API hospedada via MLP_LLM_BACKEND=openai — sem Ollama.)
   ollama:
     image: ollama/ollama:latest
     profiles: ["rag"]
@@ -171,13 +172,9 @@ services:
       - "11434:11434"
     volumes:
       - mlp_ollama:/root/.ollama
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+    # GPU: opt-in pelo overlay docker-compose.gpu.yml (requer NVIDIA Container
+    # Toolkit). Ex.: docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+    #                --profile rag up -d
 
   rag-worker:
     build:
@@ -185,8 +182,15 @@ services:
       dockerfile: Dockerfile
     profiles: ["rag"]
     command: python -m rag_service.main_worker
+    # Cache dos modelos ML (bge-m3, reranker) num volume nomeado: baixa ~4 GB
+    # UMA vez e reusa entre recriações/reinícios (e compartilhado com rag-api).
+    # Sem isso, todo recreate re-baixa os modelos (minutos no 1º /answer).
+    volumes: &rag_volumes
+      - mlp_hf_cache:/root/.cache/huggingface
     environment: &rag_env
-      RAG_DEVICE: cpu
+      # Device dos modelos locais (embedders/reranker). Default cpu (portável).
+      # Para GPU: RAG_DEVICE=cuda + o overlay docker-compose.gpu.yml.
+      RAG_DEVICE: ${MLP_RAG_DEVICE:-cpu}
       RAG_QDRANT_URL: http://qdrant:6333
       RAG_QDRANT_COLLECTION: documents
       RAG_RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
@@ -198,8 +202,13 @@ services:
       RAG_NEST_BASE_URL: http://api:3333
       RAG_NEST_SERVICE_TOKEN: ${MLP_INTERNAL_API_TOKEN:-dev_internal_service_token_0123456789abcdef}
       RAG_SERVICE_API_TOKEN: ${MLP_SEARCH_SERVICE_TOKEN:-dev_search_service_token_0123456789abcd}
+      # Backend do LLM: "ollama" (default, local) ou "openai" (API compatível:
+      # OpenAI, Groq, OpenRouter, vLLM...). Para API, defina MLP_LLM_API_BASE/KEY.
+      RAG_LLM_BACKEND: ${MLP_LLM_BACKEND:-ollama}
+      RAG_LLM_MODEL: ${MLP_LLM_MODEL:-qwen2.5:7b-instruct}
       RAG_OLLAMA_URL: http://ollama:11434/api/chat
-      RAG_LLM_MODEL: qwen2.5:7b-instruct
+      RAG_LLM_API_BASE: ${MLP_LLM_API_BASE:-}
+      RAG_LLM_API_KEY: ${MLP_LLM_API_KEY:-}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -216,6 +225,7 @@ services:
     command: python -m uvicorn rag_service.adapters.inbound.search_api:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
+    volumes: *rag_volumes
     environment: *rag_env
     depends_on:
       qdrant:
@@ -228,3 +238,4 @@ volumes:
   mlp_minio:
   mlp_qdrant:
   mlp_ollama:
+  mlp_hf_cache:
