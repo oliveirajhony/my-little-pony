@@ -5,6 +5,7 @@ export const CONTACT_MESSAGE_REPOSITORY = Symbol('ContactMessageRepository');
 export const EVENT_PUBLISHER = Symbol('EventPublisher');
 export const CACHE_STORE = Symbol('CacheStore');
 export const SEARCH_GATEWAY = Symbol('SearchGateway');
+export const ANSWER_GATEWAY = Symbol('AnswerGateway');
 export const PASSWORD_HASHER = Symbol('PasswordHasher');
 export const TOKEN_SERVICE = Symbol('TokenService');
 export const REFRESH_TOKEN_STORE = Symbol('RefreshTokenStore');
