@@ -26,6 +26,8 @@ export const EnvSchema = z.object({
   MINIO_BUCKET: z.string().default('avatars'),
   // Python search/indexing service base URL. Empty until Spec 2 is deployed.
   SEARCH_SERVICE_URL: z.string().default(''),
+  // Service token the search proxy sends to the Python /search (= RAG_SERVICE_API_TOKEN).
+  SEARCH_SERVICE_TOKEN: z.string().default(''),
   // SMTP para envio de e-mail (dev: Mailpit em localhost:1025, sem auth).
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().default(1025),
@@ -53,6 +55,7 @@ export type AppConfig = {
   minioSecretKey: string;
   minioBucket: string;
   searchServiceUrl: string;
+  searchServiceToken: string;
   smtpHost: string;
   smtpPort: number;
   smtpSecure: boolean;
@@ -89,6 +92,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     minioSecretKey: env_.MINIO_SECRET_KEY,
     minioBucket: env_.MINIO_BUCKET,
     searchServiceUrl: env_.SEARCH_SERVICE_URL,
+    searchServiceToken: env_.SEARCH_SERVICE_TOKEN,
     smtpHost: env_.SMTP_HOST,
     smtpPort: env_.SMTP_PORT,
     smtpSecure: env_.SMTP_SECURE,

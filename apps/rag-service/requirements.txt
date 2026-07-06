@@ -1,0 +1,21 @@
+# Runtime do serviço Python (Spec 2) — versões pinadas p/ build reprodutível
+docling==2.110.0
+sentence-transformers==5.6.0
+# Pinned <5: transformers 5.x dropped the top-level PreTrainedModel export that
+# sentence-transformers 5.6.0 imports (breaks boot). 4.x is compatible.
+transformers>=4.41,<5
+fastembed==0.8.0
+qdrant-client==1.18.0
+pika==1.4.1
+minio==7.2.20
+httpx==0.28.1
+fastapi==0.139.0
+uvicorn==0.50.0
+pydantic-settings==2.14.2
+prometheus-client==0.25.0
+
+# Dev/testes/qualidade
+pytest==9.1.1
+ruff==0.15.20
+mypy==2.1.0
+python-docx==1.2.0
