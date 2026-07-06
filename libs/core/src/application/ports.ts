@@ -95,7 +95,13 @@ export interface CacheStore {
 }
 
 /** A single hit from the semantic/hybrid search service (Python, Spec 2). */
-export type SearchHit = { documentId: string; score: number; snippet: string };
+export type SearchHit = {
+  documentId: string;
+  score: number;
+  snippet: string;
+  // Fonte do hit: documento nativo ou arquivo importado (ausente => native).
+  kind?: SourceKind;
+};
 
 /** Outbound port to the search service. The HTTP adapter proxies to Python. */
 export interface SearchGateway {
