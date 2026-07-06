@@ -48,9 +48,10 @@ function makeEvents() {
   const pdfRequested: string[] = [];
   const emailRequested: string[] = [];
   const events: EventPublisher = {
-    documentIndexRequested: async (e) => {
+    indexRequested: async (e) => {
       published.push(e.documentId);
     },
+    deindexRequested: async () => {},
     documentPdfRequested: async (e) => {
       pdfRequested.push(e.documentId);
     },
