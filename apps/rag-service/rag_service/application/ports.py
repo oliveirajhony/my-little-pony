@@ -107,6 +107,15 @@ class Reranker(Protocol):
     def rerank(self, query: str, hits: list[RawHit]) -> list[RawHit]: ...
 
 
+class AnswerGenerator(Protocol):
+    """Gera uma resposta ancorada no contexto. Adapter real: Ollama (LLM local).
+
+    Recebe a pergunta e o CONTEXTO (trechos numerados) e devolve o texto da
+    resposta, instruído a usar só o contexto e citar as fontes com [n]."""
+
+    def generate(self, query: str, context: str) -> str: ...
+
+
 class IndexResultPublisher(Protocol):
     """Publica o resultado da indexação. Adapter real: RabbitMQ
     (document.index.completed)."""

@@ -251,6 +251,17 @@ class RecordingPublisher:
         return self.published[-1]
 
 
+class FakeAnswerGenerator:
+    """Gerador fake: ecoa o contexto recebido (para asserção sem LLM real)."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str]] = []
+
+    def generate(self, query: str, context: str) -> str:
+        self.calls.append((query, context))
+        return f"resposta baseada em {context.count('[')} trecho(s)"
+
+
 def _cosine(a: list[float], b: list[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b, strict=False))
     norm_a = math.sqrt(sum(x * x for x in a))
