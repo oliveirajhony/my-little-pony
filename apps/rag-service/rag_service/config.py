@@ -62,10 +62,28 @@ class Settings(BaseSettings):
     dense_backend: str = "local"
     dense_service_url: str = "http://localhost:8080"
 
-    # RAG generativo (/answer): LLM local via Ollama (como o v2).
-    ollama_url: str = "http://localhost:11434/api/chat"
+    # RAG generativo (/answer): backend do LLM plugável.
+    #   "ollama": LLM local via Ollama (default — zero-config, sem API key, portável).
+    #   "openai": qualquer endpoint compatível com a API OpenAI /chat/completions
+    #             (OpenAI, Groq, OpenRouter, Together, vLLM, LM Studio...).
+    llm_backend: str = "ollama"
     llm_model: str = "qwen2.5:7b-instruct"
+
+    # Backend "ollama".
+    ollama_url: str = "http://localhost:11434/api/chat"
     ollama_timeout: float = 300.0
+
+    # Backend "openai" (API hospedada ou compatível). Só usados quando
+    # llm_backend="openai"; a base e a chave dependem do provedor.
+    llm_api_base: str = ""  # ex.: https://api.openai.com/v1
+    llm_api_key: str = ""
+    llm_api_timeout: float = 60.0
+
+    # Streaming (/answer/stream): protege o LLM único (1 geração por vez em CPU).
+    llm_max_concurrency: int = 1
+    stream_queue_max_depth: int = 8      # fila cheia → recusa (error) em vez de enfileirar sem fim
+    stream_queue_max_wait_s: float = 30.0  # espera máxima na fila antes de desistir
+    stream_idle_timeout_s: float = 60.0    # sem token por esse tempo → encerra
     # Só entram no contexto trechos com score de rerank >= limiar (anti-alucinação).
     answer_min_score: float = 0.05
     # Quantos trechos, no máximo, viram contexto do LLM.
