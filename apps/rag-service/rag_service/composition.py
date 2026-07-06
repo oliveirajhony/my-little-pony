@@ -14,11 +14,17 @@ from rag_service.adapters.outbound.docling_chunker import DoclingChunker
 from rag_service.adapters.outbound.minio_blob_storage import MinioBlobStorage
 from rag_service.adapters.outbound.nest_content_client import NestContentClient
 from rag_service.adapters.outbound.nest_document_source import NestDocumentSource
+from rag_service.adapters.outbound.ollama_answer_generator import OllamaAnswerGenerator
 from rag_service.adapters.outbound.qdrant_index import QdrantServerIndex
 from rag_service.adapters.outbound.rabbit_publisher import RabbitEventPublisher
 from rag_service.adapters.outbound.tei_dense_embedder import TeiDenseEmbedder
 from rag_service.application.ports import DenseEmbedder
-from rag_service.application.use_cases import IndexDocument, SearchDocuments
+from rag_service.application.use_cases import (
+    AnswerQuestion,
+    DeindexDocument,
+    IndexDocument,
+    SearchDocuments,
+)
 from rag_service.config import Settings
 
 
@@ -32,6 +38,7 @@ class Composition:
         self._chunker: DoclingChunker | None = None
         self._source: NestDocumentSource | None = None
         self._publisher: RabbitEventPublisher | None = None
+        self._answer_generator: OllamaAnswerGenerator | None = None
 
     # --- adapters (singletons preguiçosos) --- #
     def dense(self) -> DenseEmbedder:
@@ -87,6 +94,15 @@ class Composition:
             )
         return self._publisher
 
+    def answer_generator(self) -> OllamaAnswerGenerator:
+        if self._answer_generator is None:
+            self._answer_generator = OllamaAnswerGenerator(
+                url=self._s.ollama_url,
+                model=self._s.llm_model,
+                timeout=self._s.ollama_timeout,
+            )
+        return self._answer_generator
+
     # --- casos de uso --- #
     def index_document(self) -> IndexDocument:
         return IndexDocument(
@@ -106,12 +122,28 @@ class Composition:
             reranker=self.reranker(),
         )
 
+    def deindex_document(self) -> DeindexDocument:
+        return DeindexDocument(index=self.index())
+
+    def answer_question(self) -> AnswerQuestion:
+        return AnswerQuestion(
+            dense=self.dense(),
+            sparse=self.sparse(),
+            index=self.index(),
+            reranker=self.reranker(),
+            generator=self.answer_generator(),
+            min_score=self._s.answer_min_score,
+            top_k=self._s.answer_top_k,
+            max_context_chars=self._s.answer_max_context_chars,
+        )
+
     # --- adapters de entrada --- #
     def index_consumer(self) -> RabbitIndexConsumer:
         return RabbitIndexConsumer(
             url=self._s.rabbitmq_url,
             index_document=self.index_document(),
             publisher=self.publisher(),
+            deindex_document=self.deindex_document(),
             max_retries=self._s.max_retries,
             retry_ttl_ms=self._s.retry_ttl_ms,
             heartbeat=self._s.rabbitmq_heartbeat,

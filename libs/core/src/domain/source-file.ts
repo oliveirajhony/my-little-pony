@@ -1,3 +1,4 @@
+import type { IndexStatus } from './document.js';
 import { DomainError } from './errors.js';
 
 /** Tipos de documento-fonte aceitos para importação (só leitura). */
@@ -13,6 +14,12 @@ export type SourceFileProps = {
   contentType: string;
   sizeBytes: number;
   createdAt: Date;
+  /** Estado da indexação no pipeline de RAG (fila -> worker Python). */
+  indexStatus: IndexStatus;
+  /** Versão da indexação; sobe a cada pedido de (re)indexação. */
+  version: number;
+  /** Quando ficou pronto para busca/RAG (null enquanto não indexado). */
+  indexedAt: Date | null;
 };
 
 /** Deriva o tipo a partir da extensão do nome. `null` = extensão não suportada. */
@@ -71,11 +78,28 @@ export class SourceFile {
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
       createdAt: input.now,
+      // Todo arquivo importado entra na fila de indexação de imediato.
+      indexStatus: 'indexing',
+      version: 1,
+      indexedAt: null,
     });
   }
 
   isOwnedBy(userId: string): boolean {
     return this.props.ownerId === userId;
+  }
+
+  /** Pede uma (re)indexação: sobe a versão e volta ao estado "indexing". */
+  requestReindex(): void {
+    this.props.version += 1;
+    this.props.indexStatus = 'indexing';
+    this.props.indexedAt = null;
+  }
+
+  /** Aplica o resultado do pipeline de indexação (vindo da fila). */
+  setIndexStatus(status: IndexStatus, now: Date): void {
+    this.props.indexStatus = status;
+    this.props.indexedAt = status === 'ready' ? now : null;
   }
 
   get id(): string {
@@ -98,6 +122,15 @@ export class SourceFile {
   }
   get createdAt(): Date {
     return this.props.createdAt;
+  }
+  get indexStatus(): IndexStatus {
+    return this.props.indexStatus;
+  }
+  get version(): number {
+    return this.props.version;
+  }
+  get indexedAt(): Date | null {
+    return this.props.indexedAt;
   }
 
   toProps(): SourceFileProps {

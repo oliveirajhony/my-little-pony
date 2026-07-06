@@ -40,6 +40,23 @@ export interface DocumentRepository {
 /** Emitted when a published document needs (re)indexing by the Python service. */
 export type DocumentIndexRequested = { documentId: string; ownerId: string; version: number };
 
+/**
+ * Fonte indexável: documento nativo (HTML do editor) ou arquivo importado
+ * (bytes no MinIO). O worker Python usa o `kind` para resolver o descriptor.
+ */
+export type SourceKind = 'native' | 'file';
+
+/** Emitted when an indexable source (document or file) needs (re)indexing. */
+export type IndexRequested = {
+  documentId: string;
+  ownerId: string;
+  version: number;
+  kind: SourceKind;
+};
+
+/** Emitted when an indexable source is removed and its vectors must be dropped. */
+export type DeindexRequested = { documentId: string; ownerId: string; kind: SourceKind };
+
 /** Emitted when a published document needs its PDF (re)generated. */
 export type DocumentPdfRequested = { documentId: string; ownerId: string };
 
@@ -48,7 +65,8 @@ export type DocumentPdfEmailRequested = { ownerId: string; slug: string; recipie
 
 /** Outbound port to the message broker (RabbitMQ adapter). */
 export interface EventPublisher {
-  documentIndexRequested(event: DocumentIndexRequested): Promise<void>;
+  indexRequested(event: IndexRequested): Promise<void>;
+  deindexRequested(event: DeindexRequested): Promise<void>;
   documentPdfRequested(event: DocumentPdfRequested): Promise<void>;
   documentPdfEmailRequested(event: DocumentPdfEmailRequested): Promise<void>;
 }
@@ -77,11 +95,25 @@ export interface CacheStore {
 }
 
 /** A single hit from the semantic/hybrid search service (Python, Spec 2). */
-export type SearchHit = { documentId: string; score: number; snippet: string };
+export type SearchHit = {
+  documentId: string;
+  score: number;
+  snippet: string;
+  // Fonte do hit: documento nativo ou arquivo importado (ausente => native).
+  kind?: SourceKind;
+};
 
 /** Outbound port to the search service. The HTTP adapter proxies to Python. */
 export interface SearchGateway {
   search(input: { ownerId: string; q: string }): Promise<SearchHit[]>;
+}
+
+/** A generative answer grounded in retrieved sources (Python /answer). */
+export type GatewayAnswer = { answer: string; grounded: boolean; sources: SearchHit[] };
+
+/** Outbound port to the RAG answer service. The HTTP adapter proxies to Python. */
+export interface AnswerGateway {
+  answer(input: { ownerId: string; q: string }): Promise<GatewayAnswer>;
 }
 
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */

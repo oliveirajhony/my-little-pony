@@ -139,10 +139,11 @@ export class PublishDocument {
     doc.publish(this.clock.now());
     await this.repo.save(doc);
     // Ask the indexing pipeline to (re)index this document.
-    await this.events.documentIndexRequested({
+    await this.events.indexRequested({
       documentId: doc.id,
       ownerId: doc.ownerId,
       version: doc.version,
+      kind: 'native',
     });
     // Ask the PDF pipeline to (re)generate the downloadable file.
     await this.events.documentPdfRequested({ documentId: doc.id, ownerId: doc.ownerId });

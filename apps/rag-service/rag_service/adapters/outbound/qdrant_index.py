@@ -82,9 +82,7 @@ class QdrantServerIndex:
         )
 
     def _document_filter(self, document_id: str) -> Filter:
-        return Filter(
-            must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]
-        )
+        return Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))])
 
     def current_version(self, document_id: str) -> int | None:
         points, _next = self._client.scroll(
@@ -105,9 +103,7 @@ class QdrantServerIndex:
             exact=True,
         ).count
 
-    def already_indexed(
-        self, document_id: str, version: int, chunk_ids: list[str]
-    ) -> set[str]:
+    def already_indexed(self, document_id: str, version: int, chunk_ids: list[str]) -> set[str]:
         wanted = set(chunk_ids)
         found: set[str] = set()
         flt = Filter(
@@ -170,6 +166,7 @@ class QdrantServerIndex:
                     "document_id": chunk.document_id,
                     "chunk_id": chunk.chunk.chunk_id,
                     "version": chunk.version,
+                    "kind": chunk.kind,
                     "index": chunk.chunk.index,
                     "text": chunk.chunk.text,
                     "contextualized_text": chunk.chunk.contextualized_text,
@@ -219,6 +216,7 @@ class QdrantServerIndex:
                 chunk_id=(point.payload or {}).get("chunk_id", ""),
                 score=point.score,
                 text=(point.payload or {}).get("text", ""),
+                kind=(point.payload or {}).get("kind", "native"),
             )
             for point in response.points
         ]

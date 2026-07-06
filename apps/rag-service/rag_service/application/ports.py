@@ -23,7 +23,7 @@ class DocumentSource(Protocol):
     No serviço real: consulta o descriptor no Nest e, se for arquivo, lê os
     bytes do object storage. O Python só LÊ."""
 
-    def fetch(self, document_id: str) -> RawDocument: ...
+    def fetch(self, document_id: str, kind: str = "native") -> RawDocument: ...
 
 
 class BlobStorage(Protocol):
@@ -74,9 +74,7 @@ class VectorIndex(Protocol):
         """Quantos chunks o documento tem indexados no momento."""
         ...
 
-    def already_indexed(
-        self, document_id: str, version: int, chunk_ids: list[str]
-    ) -> set[str]:
+    def already_indexed(self, document_id: str, version: int, chunk_ids: list[str]) -> set[str]:
         """Subconjunto de chunk_ids que JÁ existem no índice (doc+versão).
 
         Base da retomada: só se embeda o que não está aqui."""
@@ -107,6 +105,15 @@ class Reranker(Protocol):
     """
 
     def rerank(self, query: str, hits: list[RawHit]) -> list[RawHit]: ...
+
+
+class AnswerGenerator(Protocol):
+    """Gera uma resposta ancorada no contexto. Adapter real: Ollama (LLM local).
+
+    Recebe a pergunta e o CONTEXTO (trechos numerados) e devolve o texto da
+    resposta, instruído a usar só o contexto e citar as fontes com [n]."""
+
+    def generate(self, query: str, context: str) -> str: ...
 
 
 class IndexResultPublisher(Protocol):

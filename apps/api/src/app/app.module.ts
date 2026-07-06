@@ -5,6 +5,7 @@ import { AuthModule } from '../auth/auth.module';
 import { SecurityModule } from '../auth/security.module';
 import { ConfigModule } from '../config/config.module';
 import { DocumentsModule } from '../documents/documents.module';
+import { ExploreModule } from '../explore/explore.module';
 import { HealthController } from '../health/health.controller';
 import { DomainExceptionFilter } from '../http/domain-exception.filter';
 import { InternalModule } from '../internal/internal.module';
@@ -40,6 +41,7 @@ import { UsersModule } from '../users/users.module';
     DocumentsModule,
     PublicModule,
     SearchModule,
+    ExploreModule,
     InternalModule,
     MessagesModule,
     PersonalAccessTokensModule,

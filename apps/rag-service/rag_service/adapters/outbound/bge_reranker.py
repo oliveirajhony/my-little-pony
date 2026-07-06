@@ -29,6 +29,7 @@ class BgeReranker:
                 chunk_id=hit.chunk_id,
                 score=float(score),
                 text=hit.text,
+                kind=hit.kind,
             )
             for score, hit in ranked
         ]

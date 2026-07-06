@@ -35,6 +35,7 @@ export {
   SaveDraft,
   UnpublishDocument,
 } from './application/document-use-cases.js';
+export { AnswerQuestion, type ExploreAnswer } from './application/explore-use-cases.js';
 export {
   AuthenticatePersonalAccessToken,
   type CreatedAccessToken,
@@ -46,12 +47,13 @@ export {
 } from './application/pat-use-cases.js';
 export type {
   AccessTokenGenerator,
+  AnswerGateway,
   AvatarStorage,
   CacheStore,
   Clock,
   ContactMessagePage,
   ContactMessageRepository,
-  DocumentIndexRequested,
+  DeindexRequested,
   DocumentPage,
   DocumentPdfEmailRequested,
   DocumentPdfRequested,
@@ -60,8 +62,10 @@ export type {
   DocumentRepository,
   EmailSender,
   EventPublisher,
+  GatewayAnswer,
   GeneratedAccessToken,
   IdGenerator,
+  IndexRequested,
   PasswordHasher,
   PdfRenderer,
   PersonalAccessTokenRepository,
@@ -70,6 +74,7 @@ export type {
   SearchHit,
   SourceFileRepository,
   SourceFileStorage,
+  SourceKind,
   StoredAvatar,
   StoredSourceFile,
   TokenService,
@@ -89,6 +94,7 @@ export {
   GetSourceFileContent,
   ImportSourceFile,
   ListSourceFiles,
+  MarkSourceFileIndexed,
 } from './application/source-file-use-cases.js';
 export { ContactMessage, type ContactMessageProps } from './domain/contact-message.js';
 export {

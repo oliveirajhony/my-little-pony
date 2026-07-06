@@ -73,7 +73,25 @@ services:
     volumes:
       - mlp_qdrant:/qdrant/storage
 
+  # LLM local para o RAG generativo (/answer). Puxe o modelo uma vez:
+  #   docker compose exec ollama ollama pull qwen2.5:7b-instruct
+  # Requer o NVIDIA Container Toolkit; sem GPU, remova o bloco `deploy` (roda em CPU).
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - mlp_ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
 volumes:
   mlp_pg:
   mlp_minio:
   mlp_qdrant:
+  mlp_ollama:

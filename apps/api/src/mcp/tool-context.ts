@@ -1,5 +1,6 @@
 import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import {
+  AnswerQuestion,
   type CacheStore,
   CreateDocument,
   DeleteDocument,
@@ -35,6 +36,7 @@ export interface McpUseCases {
   getProfile: GetProfile;
   updateProfile: UpdateProfile;
   searchDocuments: SearchDocuments;
+  answerQuestion: AnswerQuestion;
   cache: CacheStore;
 }
 

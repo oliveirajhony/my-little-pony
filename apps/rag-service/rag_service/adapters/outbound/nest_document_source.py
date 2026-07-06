@@ -20,9 +20,9 @@ class NestDocumentSource:
         self._nest = nest_client
         self._blobs = blob_storage
 
-    def fetch(self, document_id: str) -> RawDocument:
-        descriptor = self._nest.fetch_descriptor(document_id)
-        kind = descriptor.get("kind", "native")
+    def fetch(self, document_id: str, kind: str = "native") -> RawDocument:
+        descriptor = self._nest.fetch_descriptor(document_id, kind)
+        kind = descriptor.get("kind", kind)
 
         if kind == "file":
             storage_key = descriptor["storageKey"]

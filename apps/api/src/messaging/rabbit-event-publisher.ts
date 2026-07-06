@@ -1,12 +1,14 @@
 import type {
-  DocumentIndexRequested,
+  DeindexRequested,
   DocumentPdfEmailRequested,
   DocumentPdfRequested,
   EventPublisher,
+  IndexRequested,
 } from '@my-little-pony/core';
 import type { RabbitConnection } from './rabbit.connection';
 import {
   DOCUMENTS_EXCHANGE,
+  RK_DEINDEX_REQUESTED,
   RK_INDEX_REQUESTED,
   RK_PDF_EMAIL_REQUESTED,
   RK_PDF_REQUESTED,
@@ -16,8 +18,12 @@ import {
 export class RabbitEventPublisher implements EventPublisher {
   constructor(private readonly connection: RabbitConnection) {}
 
-  async documentIndexRequested(event: DocumentIndexRequested): Promise<void> {
+  async indexRequested(event: IndexRequested): Promise<void> {
     await this.publish(RK_INDEX_REQUESTED, event);
+  }
+
+  async deindexRequested(event: DeindexRequested): Promise<void> {
+    await this.publish(RK_DEINDEX_REQUESTED, event);
   }
 
   async documentPdfRequested(event: DocumentPdfRequested): Promise<void> {
