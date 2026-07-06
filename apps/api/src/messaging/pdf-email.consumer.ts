@@ -1,8 +1,9 @@
-import { type DocumentRepository, SendDocumentPdfEmail } from '@my-little-pony/core';
+import type { DocumentRepository, EmailSender } from '@my-little-pony/core';
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { APP_CONFIG } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
-import { DOCUMENT_REPOSITORY } from '../tokens';
+import { renderPdfEmail } from '../mail/pdf-email.template';
+import { DOCUMENT_REPOSITORY, EMAIL_SENDER } from '../tokens';
 import { RabbitConnection } from './rabbit.connection';
 import { DOCUMENTS_EXCHANGE, PDF_EMAIL_QUEUE, RK_PDF_EMAIL_REQUESTED } from './rabbit.constants';
 
@@ -16,7 +17,7 @@ export class PdfEmailConsumer implements OnModuleInit {
   constructor(
     private readonly connection: RabbitConnection,
     @Inject(DOCUMENT_REPOSITORY) private readonly repo: DocumentRepository,
-    private readonly sendEmail: SendDocumentPdfEmail,
+    @Inject(EMAIL_SENDER) private readonly mailer: EmailSender,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -41,10 +42,13 @@ export class PdfEmailConsumer implements OnModuleInit {
         const doc = await this.repo.findPublishedBySlug(payload.ownerId, payload.slug);
         if (doc) {
           const downloadUrl = `${this.config.apiPublicUrl}/public/documents/${payload.ownerId}/${payload.slug}/pdf`;
-          await this.sendEmail.execute({
-            recipient: payload.recipient,
-            title: doc.title,
-            downloadUrl,
+          const documentUrl = `${this.config.webOrigin}/d/${payload.ownerId}/${payload.slug}`;
+          const email = renderPdfEmail({ title: doc.title, downloadUrl, documentUrl });
+          await this.mailer.send({
+            to: payload.recipient,
+            subject: email.subject,
+            html: email.html,
+            text: email.text,
           });
         }
         channel.ack(message);
