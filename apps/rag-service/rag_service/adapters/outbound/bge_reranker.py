@@ -11,7 +11,9 @@ RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
 
 class BgeReranker:
     def __init__(self, model: str = RERANK_MODEL, device: str = "cpu") -> None:
-        self._model = CrossEncoder(model, device=device)
+        # low_cpu_mem_usage=False avoids the "meta tensor" error when moving the
+        # cross-encoder to GPU (accelerate loads on meta device by default).
+        self._model = CrossEncoder(model, device=device, model_kwargs={"low_cpu_mem_usage": False})
 
     def rerank(self, query: str, hits: list[RawHit]) -> list[RawHit]:
         if not hits:
