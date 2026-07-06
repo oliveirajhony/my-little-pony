@@ -14,11 +14,14 @@ export class SearchResultResponse {
   @ApiProperty({ description: 'Trecho relevante do conteúdo' })
   snippet!: string;
 
+  @ApiProperty({ enum: ['native', 'file'], description: 'Documento nativo ou arquivo importado' })
+  kind!: 'native' | 'file';
+
   @ApiProperty()
   title!: string;
 
-  @ApiProperty()
-  slug!: string;
+  @ApiProperty({ nullable: true, description: 'Slug público (só documentos nativos)' })
+  slug!: string | null;
 }
 
 @ApiTags('search')

@@ -26,7 +26,13 @@ export class HttpSearchGateway implements SearchGateway {
         body: JSON.stringify({ ownerId: input.ownerId, query: input.q }),
       });
       if (!response.ok) return [];
-      return (await response.json()) as SearchHit[];
+      const hits = (await response.json()) as Array<SearchHit & { kind?: string }>;
+      return hits.map((hit) => ({
+        documentId: hit.documentId,
+        score: hit.score,
+        snippet: hit.snippet,
+        kind: hit.kind === 'file' ? 'file' : 'native',
+      }));
     } catch (error) {
       this.logger.warn(`search service unreachable: ${String(error)}`);
       return [];
