@@ -1,5 +1,6 @@
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
+  AnswerQuestion,
   type CacheStore,
   type Clock,
   type ContactMessageRepository,
@@ -73,6 +74,7 @@ export class McpController {
     @Inject(PASSWORD_HASHER) hasher: PasswordHasher,
     @Inject(CACHE_STORE) cache: CacheStore,
     searchDocuments: SearchDocuments,
+    answerQuestion: AnswerQuestion,
   ) {
     this.useCases = {
       listDocuments: new ListDocuments(docs),
@@ -87,6 +89,7 @@ export class McpController {
       getProfile: new GetProfile(users),
       updateProfile: new UpdateProfile(users, hasher, clock),
       searchDocuments,
+      answerQuestion,
       cache,
     };
   }

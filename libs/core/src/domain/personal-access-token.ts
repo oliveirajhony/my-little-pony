@@ -9,6 +9,7 @@ export type PatScope =
   | 'documents:read'
   | 'documents:write'
   | 'documents:publish'
+  | 'files:read'
   | 'messages:read'
   | 'messages:write'
   | 'profile:read'
@@ -18,6 +19,7 @@ export const PAT_SCOPES: readonly PatScope[] = [
   'documents:read',
   'documents:write',
   'documents:publish',
+  'files:read',
   'messages:read',
   'messages:write',
   'profile:read',
