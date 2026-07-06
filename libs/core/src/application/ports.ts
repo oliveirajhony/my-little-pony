@@ -1,3 +1,4 @@
+import type { ContactMessage } from '../domain/contact-message.js';
 import type { Document, DocumentStatus } from '../domain/document.js';
 import type { User } from '../domain/user.js';
 
@@ -53,6 +54,17 @@ export interface EventPublisher {
 /** Sends transactional e-mail (SMTP/nodemailer adapter). */
 export interface EmailSender {
   send(input: { to: string; subject: string; html: string; text?: string }): Promise<void>;
+}
+
+export type ContactMessagePage = { items: ContactMessage[]; total: number };
+
+/** Persistência das mensagens de contato (adapter TypeORM). */
+export interface ContactMessageRepository {
+  save(message: ContactMessage): Promise<void>;
+  findById(id: string): Promise<ContactMessage | null>;
+  /** Mensagens de um autor, mais recentes primeiro, paginadas. */
+  listByOwner(query: { ownerId: string; page: number; limit: number }): Promise<ContactMessagePage>;
+  countUnread(ownerId: string): Promise<number>;
 }
 
 /** Key/value cache with TTL (Redis adapter). */

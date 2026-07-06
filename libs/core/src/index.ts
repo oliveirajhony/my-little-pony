@@ -16,6 +16,11 @@ export {
   SetAvatar,
 } from './application/avatar-use-cases.js';
 export {
+  ListContactMessages,
+  MarkContactMessageRead,
+  SubmitContactMessage,
+} from './application/contact-use-cases.js';
+export {
   CreateDocument,
   DeleteDocument,
   GenerateDocumentPdf,
@@ -35,6 +40,8 @@ export type {
   AvatarStorage,
   CacheStore,
   Clock,
+  ContactMessagePage,
+  ContactMessageRepository,
   DocumentIndexRequested,
   DocumentPage,
   DocumentPdfEmailRequested,
@@ -63,6 +70,7 @@ export {
   SearchDocuments,
   type SearchResultItem,
 } from './application/search-use-cases.js';
+export { ContactMessage, type ContactMessageProps } from './domain/contact-message.js';
 export {
   Document,
   type DocumentProps,

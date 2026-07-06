@@ -5,18 +5,22 @@ import { type FormEvent, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { API_BASE } from '../../lib/api-client';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Formulário de contato. Mock: valida e mostra sucesso inline (sem envio real). */
-export function ContactForm() {
+type Props = { ownerId: string; slug: string };
+
+/** Formulário de contato: envia a mensagem ao autor do documento (backend). */
+export function ContactForm({ ownerId, slug }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!name.trim() || !message.trim()) {
       setError('Preencha nome e mensagem.');
@@ -27,7 +31,28 @@ export function ContactForm() {
       return;
     }
     setError('');
-    setSent(true);
+    setSending(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/public/documents/${ownerId}/${encodeURIComponent(slug)}/contact`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim(), email: email.trim(), message: message.trim() }),
+        },
+      );
+      if (!res.ok) {
+        throw new Error(
+          res.status === 429
+            ? 'Muitas tentativas. Aguarde um instante e tente de novo.'
+            : 'Não foi possível enviar. Tente de novo.',
+        );
+      }
+      setSent(true);
+    } catch (err) {
+      setSending(false);
+      setError(err instanceof Error ? err.message : 'Não foi possível enviar. Tente de novo.');
+    }
   }
 
   if (sent) {
@@ -78,9 +103,9 @@ export function ContactForm() {
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end">
-        <Button type="submit">
+        <Button type="submit" disabled={sending}>
           <Send />
-          Enviar mensagem
+          {sending ? 'Enviando…' : 'Enviar mensagem'}
         </Button>
       </div>
     </form>

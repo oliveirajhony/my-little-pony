@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
-import { Globe, Settings } from 'lucide-react';
+import { Globe, Inbox, Settings } from 'lucide-react';
 
 export type Screen = { title: string; href: string; icon: LucideIcon };
 
 export const screens: Screen[] = [
   { title: 'Documentos', href: '/app', icon: Globe },
+  { title: 'Mensagens', href: '/app/mensagens', icon: Inbox },
   { title: 'Configurações', href: '/app/config', icon: Settings },
 ];
 

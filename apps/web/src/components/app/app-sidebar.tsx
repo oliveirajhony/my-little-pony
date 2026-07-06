@@ -13,11 +13,13 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useAuth } from '../../lib/auth-store';
 import { useCommandMenu } from '../../lib/command-menu-store';
+import { useMessages } from '../../lib/messages-store';
 import { screens } from '../../lib/mock-data';
 import { DocIcon } from '../icons';
 import { ThemeSwitcher } from './theme-switcher';
@@ -38,6 +40,7 @@ export function AppSidebar() {
   const openCommand = useCommandMenu((s) => s.setOpen);
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
+  const { unread } = useMessages();
 
   const name = user?.name ?? '';
   const email = user?.email ?? '';
@@ -93,6 +96,9 @@ export function AppSidebar() {
                       <span>{screen.title}</span>
                     </Link>
                   </SidebarMenuButton>
+                  {screen.href === '/app/mensagens' && unread > 0 && (
+                    <SidebarMenuBadge>{unread}</SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
