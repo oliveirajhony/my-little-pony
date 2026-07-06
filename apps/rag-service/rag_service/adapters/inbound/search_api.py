@@ -31,6 +31,7 @@ class SearchHitResponse(BaseModel):
     chunkId: str
     score: float
     snippet: str
+    kind: str = "native"
 
 
 # Composition root do processo da API (adapters preguiçosos).
@@ -90,6 +91,7 @@ def search(
             chunkId=hit.chunk_id,
             score=hit.score,
             snippet=hit.snippet,
+            kind=hit.kind,
         )
         for hit in hits
     ]

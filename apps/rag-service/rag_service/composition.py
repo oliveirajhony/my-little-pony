@@ -18,7 +18,7 @@ from rag_service.adapters.outbound.qdrant_index import QdrantServerIndex
 from rag_service.adapters.outbound.rabbit_publisher import RabbitEventPublisher
 from rag_service.adapters.outbound.tei_dense_embedder import TeiDenseEmbedder
 from rag_service.application.ports import DenseEmbedder
-from rag_service.application.use_cases import IndexDocument, SearchDocuments
+from rag_service.application.use_cases import DeindexDocument, IndexDocument, SearchDocuments
 from rag_service.config import Settings
 
 
@@ -106,12 +106,16 @@ class Composition:
             reranker=self.reranker(),
         )
 
+    def deindex_document(self) -> DeindexDocument:
+        return DeindexDocument(index=self.index())
+
     # --- adapters de entrada --- #
     def index_consumer(self) -> RabbitIndexConsumer:
         return RabbitIndexConsumer(
             url=self._s.rabbitmq_url,
             index_document=self.index_document(),
             publisher=self.publisher(),
+            deindex_document=self.deindex_document(),
             max_retries=self._s.max_retries,
             retry_ttl_ms=self._s.retry_ttl_ms,
             heartbeat=self._s.rabbitmq_heartbeat,

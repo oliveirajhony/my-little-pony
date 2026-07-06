@@ -23,7 +23,7 @@ class DocumentSource(Protocol):
     No serviço real: consulta o descriptor no Nest e, se for arquivo, lê os
     bytes do object storage. O Python só LÊ."""
 
-    def fetch(self, document_id: str) -> RawDocument: ...
+    def fetch(self, document_id: str, kind: str = "native") -> RawDocument: ...
 
 
 class BlobStorage(Protocol):
@@ -74,9 +74,7 @@ class VectorIndex(Protocol):
         """Quantos chunks o documento tem indexados no momento."""
         ...
 
-    def already_indexed(
-        self, document_id: str, version: int, chunk_ids: list[str]
-    ) -> set[str]:
+    def already_indexed(self, document_id: str, version: int, chunk_ids: list[str]) -> set[str]:
         """Subconjunto de chunk_ids que JÁ existem no índice (doc+versão).
 
         Base da retomada: só se embeda o que não está aqui."""

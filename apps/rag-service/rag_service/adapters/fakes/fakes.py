@@ -40,7 +40,7 @@ class FakeDocumentSource:
     def __init__(self, docs: dict[str, str | RawDocument]) -> None:
         self._docs = docs
 
-    def fetch(self, document_id: str) -> RawDocument:
+    def fetch(self, document_id: str, kind: str = "native") -> RawDocument:
         if document_id not in self._docs:
             raise KeyError(f"documento não encontrado: {document_id}")
         value = self._docs[document_id]
@@ -159,23 +159,17 @@ class InMemoryVectorIndex:
     def count(self, document_id: str) -> int:
         return sum(1 for c in self._chunks if c.document_id == document_id)
 
-    def already_indexed(
-        self, document_id: str, version: int, chunk_ids: list[str]
-    ) -> set[str]:
+    def already_indexed(self, document_id: str, version: int, chunk_ids: list[str]) -> set[str]:
         wanted = set(chunk_ids)
         return {
             c.chunk.chunk_id
             for c in self._chunks
-            if c.document_id == document_id
-            and c.version == version
-            and c.chunk.chunk_id in wanted
+            if c.document_id == document_id and c.version == version and c.chunk.chunk_id in wanted
         }
 
     def delete_other_versions(self, document_id: str, keep_version: int) -> None:
         self._chunks = [
-            c
-            for c in self._chunks
-            if c.document_id != document_id or c.version == keep_version
+            c for c in self._chunks if c.document_id != document_id or c.version == keep_version
         ]
 
     def delete_document(self, document_id: str) -> None:
@@ -212,6 +206,7 @@ class InMemoryVectorIndex:
                     chunk_id=chunk.chunk.chunk_id,
                     score=score,
                     text=chunk.chunk.text,
+                    kind=chunk.kind,
                 )
             )
 
@@ -234,6 +229,7 @@ class LexicalReranker:
                 chunk_id=hit.chunk_id,
                 score=float(len(query_tokens & set(_tokens(hit.text)))),
                 text=hit.text,
+                kind=hit.kind,
             )
             for hit in hits
         ]
