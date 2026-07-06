@@ -9,15 +9,21 @@ import { Logger } from '@nestjs/common';
 export class HttpSearchGateway implements SearchGateway {
   private readonly logger = new Logger(HttpSearchGateway.name);
 
-  constructor(private readonly serviceUrl: string) {}
+  constructor(
+    private readonly serviceUrl: string,
+    private readonly serviceToken: string,
+  ) {}
 
   async search(input: { ownerId: string; q: string }): Promise<SearchHit[]> {
     if (!this.serviceUrl) return [];
     try {
+      const headers: Record<string, string> = { 'content-type': 'application/json' };
+      if (this.serviceToken) headers.authorization = `Bearer ${this.serviceToken}`;
       const response = await fetch(`${this.serviceUrl}/search`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(input),
+        headers,
+        // The Python service expects `query` (not `q`); ownerId scopes the tenant.
+        body: JSON.stringify({ ownerId: input.ownerId, query: input.q }),
       });
       if (!response.ok) return [];
       return (await response.json()) as SearchHit[];

@@ -1,0 +1,58 @@
+{
+  "name": "rag-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/rag-service/rag_service",
+  "tags": ["type:service", "lang:python"],
+  "targets": {
+    "install": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/rag-service",
+        "command": "python3 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -r requirements.txt"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/rag-service",
+        "command": ".venv/bin/pytest -m \"not integration\""
+      }
+    },
+    "test-integration": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/rag-service",
+        "command": ".venv/bin/pytest -m integration"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/rag-service",
+        "command": ".venv/bin/ruff check ."
+      }
+    },
+    "serve-worker": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/rag-service",
+        "command": ".venv/bin/python -m rag_service.main_worker"
+      }
+    },
+    "serve-api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/rag-service",
+        "command": ".venv/bin/python -m uvicorn rag_service.adapters.inbound.search_api:app --host 0.0.0.0 --port 8000"
+      }
+    },
+    "docker-build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/rag-service",
+        "command": "docker build -t mlp-rag-service ."
+      }
+    }
+  }
+}
