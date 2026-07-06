@@ -24,15 +24,14 @@ class RabbitEventPublisher:
     def _connect(self) -> None:
         self._connection = pika.BlockingConnection(self._params)
         self._channel = self._connection.channel()
-        self._channel.exchange_declare(
-            exchange=self._exchange, exchange_type="topic", durable=True
-        )
+        self._channel.exchange_declare(exchange=self._exchange, exchange_type="topic", durable=True)
 
     def publish_completed(self, result: IndexResult, correlation_id: str | None = None) -> None:
         payload = {
             "documentId": result.document_id,
             "status": result.status,
             "chunkCount": result.chunk_count,
+            "kind": result.kind,
         }
         if result.error is not None:
             payload["error"] = result.error

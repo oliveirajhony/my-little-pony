@@ -59,6 +59,7 @@ class SearchDocuments:
                 chunk_id=hit.chunk_id,
                 score=hit.score,
                 snippet=_snippet(hit.text),
+                kind=hit.kind,
             )
             for hit in ranked[: query.top_k]
         ]

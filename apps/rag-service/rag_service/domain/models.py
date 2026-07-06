@@ -65,6 +65,8 @@ class EmbeddedChunk:
     chunk: Chunk
     dense: list[float]
     sparse: SparseVector
+    # Fonte indexável: "native" (documento do editor) ou "file" (arquivo importado).
+    kind: str = "native"
 
 
 # --------------------------------------------------------------------------- #
@@ -89,6 +91,7 @@ class RawHit:
     chunk_id: str
     score: float
     text: str
+    kind: str = "native"
 
 
 @dataclass(frozen=True)
@@ -99,6 +102,7 @@ class SearchHit:
     chunk_id: str
     score: float
     snippet: str
+    kind: str = "native"
 
 
 # --------------------------------------------------------------------------- #
@@ -113,16 +117,23 @@ class IndexResult:
     # Quantos chunks foram REALMENTE embedados nesta execução. 0 = nada a fazer
     # (evento stale ou tudo já indexado). Permite retomada incremental.
     embedded_count: int = 0
+    # Ecoado no document.index.completed para o Nest saber qual tabela marcar.
+    kind: str = "native"
 
     @staticmethod
-    def ready(document_id: str, chunk_count: int, embedded_count: int = 0) -> IndexResult:
+    def ready(
+        document_id: str, chunk_count: int, embedded_count: int = 0, kind: str = "native"
+    ) -> IndexResult:
         return IndexResult(
             document_id=document_id,
             status="ready",
             chunk_count=chunk_count,
             embedded_count=embedded_count,
+            kind=kind,
         )
 
     @staticmethod
-    def failed(document_id: str, error: str) -> IndexResult:
-        return IndexResult(document_id=document_id, status="failed", chunk_count=0, error=error)
+    def failed(document_id: str, error: str, kind: str = "native") -> IndexResult:
+        return IndexResult(
+            document_id=document_id, status="failed", chunk_count=0, error=error, kind=kind
+        )
