@@ -261,6 +261,9 @@ class FakeAnswerGenerator:
         self.calls.append((query, context))
         return f"resposta baseada em {context.count('[')} trecho(s)"
 
+    def generate_stream(self, query: str, context: str):
+        yield self.generate(query, context)
+
 
 def _cosine(a: list[float], b: list[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b, strict=False))

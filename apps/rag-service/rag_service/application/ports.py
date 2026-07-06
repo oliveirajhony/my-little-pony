@@ -6,7 +6,7 @@ assinatura (duck typing estrutural). Isso mantém o domínio livre de infra.
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Iterator, Protocol
 
 from rag_service.domain.models import (
     Chunk,
@@ -114,6 +114,11 @@ class AnswerGenerator(Protocol):
     resposta, instruído a usar só o contexto e citar as fontes com [n]."""
 
     def generate(self, query: str, context: str) -> str: ...
+
+    def generate_stream(self, query: str, context: str) -> Iterator[str]:
+        """Gera a resposta em pedaços (streaming). O síncrono `generate` e este
+        compartilham o prompt; são transportes diferentes (não um derivado do outro)."""
+        ...
 
 
 class IndexResultPublisher(Protocol):
