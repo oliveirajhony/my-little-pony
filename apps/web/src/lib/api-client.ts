@@ -6,7 +6,16 @@
  * Ambas usam `credentials: 'include'` para o cookie httpOnly de refresh.
  */
 
+// URL pública da API — a que o BROWSER enxerga. Use para QUALQUER URL que chegue
+// ao cliente: fetch no navegador, href de download, etc. É idêntica no servidor e
+// no cliente, então é segura para hidratação (não pode divergir no SSR).
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333';
+
+// URL interna (rede do Docker) para chamadas server-to-server no SSR, onde
+// `localhost` seria o próprio container do web. Só existe no servidor: no browser
+// `API_URL_INTERNAL` é undefined e caímos na pública. NUNCA renderize esta URL no
+// HTML — ela quebra a hidratação (server vê `http://api:3333`, cliente vê a pública).
+export const API_INTERNAL_BASE = process.env.API_URL_INTERNAL || API_BASE;
 
 export type ApiError = { status: number; code?: string; message: string };
 
