@@ -35,6 +35,7 @@ export {
   SaveDraft,
   UnpublishDocument,
 } from './application/document-use-cases.js';
+export { AnswerQuestion, type ExploreAnswer } from './application/explore-use-cases.js';
 export {
   AuthenticatePersonalAccessToken,
   type CreatedAccessToken,
@@ -46,6 +47,7 @@ export {
 } from './application/pat-use-cases.js';
 export type {
   AccessTokenGenerator,
+  AnswerGateway,
   AvatarStorage,
   CacheStore,
   Clock,
@@ -60,6 +62,7 @@ export type {
   DocumentRepository,
   EmailSender,
   EventPublisher,
+  GatewayAnswer,
   GeneratedAccessToken,
   IdGenerator,
   IndexRequested,

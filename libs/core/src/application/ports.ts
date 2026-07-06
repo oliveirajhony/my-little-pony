@@ -108,6 +108,14 @@ export interface SearchGateway {
   search(input: { ownerId: string; q: string }): Promise<SearchHit[]>;
 }
 
+/** A generative answer grounded in retrieved sources (Python /answer). */
+export type GatewayAnswer = { answer: string; grounded: boolean; sources: SearchHit[] };
+
+/** Outbound port to the RAG answer service. The HTTP adapter proxies to Python. */
+export interface AnswerGateway {
+  answer(input: { ownerId: string; q: string }): Promise<GatewayAnswer>;
+}
+
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */
 export interface RefreshTokenStore {
   /** Persist a token for a user with a TTL; returns nothing. */
