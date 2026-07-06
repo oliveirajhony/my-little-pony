@@ -1,4 +1,4 @@
-import type { Document } from '@my-little-pony/core';
+import type { Document, PageConfig } from '@my-little-pony/core';
 
 export type DocumentSummary = {
   id: string;
@@ -13,7 +13,7 @@ export type DocumentSummary = {
   updatedAt: string;
 };
 
-export type DocumentDetail = DocumentSummary & { content: string };
+export type DocumentDetail = DocumentSummary & { content: string; pageConfig: PageConfig };
 
 function toSummary(doc: Document): DocumentSummary {
   return {
@@ -35,7 +35,7 @@ export function toDocumentSummary(doc: Document): DocumentSummary {
   return toSummary(doc);
 }
 
-/** Editor projection — includes the full HTML content. */
+/** Editor projection — includes the full HTML content and page config. */
 export function toDocumentDetail(doc: Document): DocumentDetail {
-  return { ...toSummary(doc), content: doc.content };
+  return { ...toSummary(doc), content: doc.content, pageConfig: doc.pageConfig };
 }

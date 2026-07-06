@@ -6,6 +6,7 @@ import type { AppConfig } from '../config/env.schema';
 import { SystemClock, UuidIdGenerator } from '../infra/system-adapters';
 import { REDIS } from '../redis/redis.module';
 import {
+  ACCESS_TOKEN_GENERATOR,
   CLOCK,
   ID_GENERATOR,
   PASSWORD_HASHER,
@@ -17,6 +18,7 @@ import { Argon2PasswordHasher } from './argon2-password-hasher';
 import { durationToSeconds } from './duration';
 import { JwtTokenService } from './jwt-token.service';
 import { RedisRefreshTokenStore } from './redis-refresh-token.store';
+import { Sha256AccessTokenGenerator } from './sha256-access-token-generator';
 
 // Binds the framework-free ports to their concrete adapters and exposes the
 // shared session machinery + access guard to the feature modules.
@@ -33,6 +35,7 @@ import { RedisRefreshTokenStore } from './redis-refresh-token.store';
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     { provide: ID_GENERATOR, useClass: UuidIdGenerator },
     { provide: CLOCK, useClass: SystemClock },
+    { provide: ACCESS_TOKEN_GENERATOR, useClass: Sha256AccessTokenGenerator },
     {
       provide: TOKEN_SERVICE,
       inject: [JwtService, APP_CONFIG],
@@ -60,6 +63,7 @@ import { RedisRefreshTokenStore } from './redis-refresh-token.store';
     CLOCK,
     TOKEN_SERVICE,
     REFRESH_TOKEN_STORE,
+    ACCESS_TOKEN_GENERATOR,
   ],
 })
 export class SecurityModule {}

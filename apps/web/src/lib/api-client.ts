@@ -78,3 +78,31 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   }
   return toResult<T>(res);
 }
+
+/** Como `apiFetch`, mas devolve o corpo como Blob (download/preview binário). */
+export async function apiFetchBlob(path: string, options: RequestInit = {}): Promise<Blob> {
+  const send = () => {
+    const token = getAccessToken();
+    const init = baseInit(options);
+    return fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: token ? { ...init.headers, Authorization: `Bearer ${token}` } : init.headers,
+    });
+  };
+
+  let res = await send();
+  if (res.status === 401 && (await refreshSession())) {
+    res = await send();
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const error: ApiError = {
+      status: res.status,
+      code: (data as { code?: string } | null)?.code,
+      message:
+        (data as { message?: string } | null)?.message ?? 'Não foi possível abrir o arquivo.',
+    };
+    throw error;
+  }
+  return res.blob();
+}
