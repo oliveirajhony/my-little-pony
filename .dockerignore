@@ -1,0 +1,29 @@
+# Nunca copiar dependências/artefatos do host para dentro da imagem:
+# node_modules do host tem binários nativos (argon2, sharp) da plataforma do host
+# e quebraria dentro do container Linux.
+node_modules
+**/node_modules
+dist
+**/dist
+.nx
+**/.nx
+.next
+**/.next
+apps/rag-service/.venv
+**/.venv
+__pycache__
+**/__pycache__
+
+# Git e ambiente local
+.git
+.gitignore
+.env
+**/.env
+!**/.env.example
+
+# Logs e temporários
+*.log
+npm-debug.log*
+.DS_Store
+coverage
+**/coverage

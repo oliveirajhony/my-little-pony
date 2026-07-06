@@ -1,4 +1,23 @@
+# =============================================================================
+# my-little-pony — stack completo em um único compose.
+#
+#   docker compose up -d                 → sobe a APP inteira (infra + api + web)
+#   docker compose --profile rag up -d   → sobe TAMBÉM a busca/RAG (Python + Qdrant + Ollama)
+#
+# App:            http://localhost:3000
+# API (Swagger):  http://localhost:3333/docs
+# Mailpit:        http://localhost:8025
+# RabbitMQ:       http://localhost:15682  (guest/guest)
+# MinIO console:  http://localhost:9011   (mlp/mlpsecret123)
+#
+# Portas publicadas no host usam offset +10 para coexistir com outros stacks locais.
+# Dentro da rede do compose os serviços falam pelas portas padrão (5432, 6379, ...).
+# =============================================================================
+
 services:
+  # ---------------------------------------------------------------------------
+  # Infraestrutura
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     environment:
@@ -6,8 +25,6 @@ services:
       POSTGRES_PASSWORD: mlp
       POSTGRES_DB: mlp
     ports:
-      # Host ports offset (+10) so this stack coexists with other local stacks
-      # (e.g. projeto1) that already bind the defaults.
       - "5442:5432"
     volumes:
       - mlp_pg:/var/lib/postgresql/data
@@ -45,7 +62,6 @@ services:
       MINIO_ROOT_USER: mlp
       MINIO_ROOT_PASSWORD: mlpsecret123
     ports:
-      # +10 offset (API 9010, console 9011) to coexist with other local stacks.
       - "9010:9000"
       - "9011:9001"
     volumes:
@@ -63,32 +79,149 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  # Vector store for the Python RAG service (apps/rag-service).
+  # ---------------------------------------------------------------------------
+  # Aplicações
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.apps
+    command: pnpm nx serve @my-little-pony/api
+    ports:
+      - "3333:3333"
+    environment:
+      PORT: 3333
+      # Infra via DNS interno do compose (portas padrão, sem offset).
+      DATABASE_URL: postgres://mlp:mlp@postgres:5432/mlp
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: mlp
+      MINIO_SECRET_KEY: mlpsecret123
+      MINIO_BUCKET: avatars
+      MINIO_SOURCE_FILE_BUCKET: source-files
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      MAIL_FROM: my-little-pony <no-reply@mlp.local>
+      # URLs vistas pelo BROWSER (host), não pela rede interna.
+      WEB_ORIGIN: http://localhost:3000
+      API_PUBLIC_URL: http://localhost:3333
+      # Segredos — DEV ONLY. Em produção, sobrescreva com valores fortes (>=32 chars).
+      JWT_ACCESS_SECRET: ${MLP_JWT_ACCESS_SECRET:-dev_access_secret_change_me_0123456789abcd}
+      JWT_REFRESH_SECRET: ${MLP_JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_0123456789abc}
+      INTERNAL_API_TOKEN: ${MLP_INTERNAL_API_TOKEN:-dev_internal_service_token_0123456789abcdef}
+      # Busca/RAG: preenchido só quando o profile `rag` está ativo (senão degrada).
+      SEARCH_SERVICE_URL: ${MLP_SEARCH_SERVICE_URL:-}
+      SEARCH_SERVICE_TOKEN: ${MLP_SEARCH_SERVICE_TOKEN:-dev_search_service_token_0123456789abcd}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3333/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.apps
+    command: pnpm nx dev web --hostname=0.0.0.0 --port=3000
+    ports:
+      - "3000:3000"
+    environment:
+      # Lida pelo browser: a API é publicada em localhost:3333 no host.
+      NEXT_PUBLIC_API_URL: http://localhost:3333
+      # Lida no servidor (SSR da página pública): DNS interno do compose.
+      API_URL_INTERNAL: http://api:3333
+    depends_on:
+      api:
+        condition: service_started
+
+  # ---------------------------------------------------------------------------
+  # Busca + RAG (profile `rag`) — pesado (modelos ML). Só sobe com --profile rag.
+  # ---------------------------------------------------------------------------
   qdrant:
     image: qdrant/qdrant:latest
+    profiles: ["rag"]
     ports:
-      # +10 offset (HTTP 6343, gRPC 6344) to coexist with other local stacks.
       - "6343:6333"
       - "6344:6334"
     volumes:
       - mlp_qdrant:/qdrant/storage
 
   # LLM local para o RAG generativo (/answer). Puxe o modelo uma vez:
-  #   docker compose exec ollama ollama pull qwen2.5:7b-instruct
-  # Requer o NVIDIA Container Toolkit; sem GPU, remova o bloco `deploy` (roda em CPU).
+  #   docker compose --profile rag exec ollama ollama pull qwen2.5:7b-instruct
+  # Sem GPU roda em CPU (mais lento); com GPU, descomente o bloco `deploy`.
   ollama:
     image: ollama/ollama:latest
+    profiles: ["rag"]
     ports:
       - "11434:11434"
     volumes:
       - mlp_ollama:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  rag-worker:
+    build:
+      context: ./apps/rag-service
+      dockerfile: Dockerfile
+    profiles: ["rag"]
+    command: python -m rag_service.main_worker
+    environment: &rag_env
+      RAG_DEVICE: cpu
+      RAG_QDRANT_URL: http://qdrant:6333
+      RAG_QDRANT_COLLECTION: documents
+      RAG_RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RAG_MINIO_ENDPOINT: minio:9000
+      RAG_MINIO_ACCESS_KEY: mlp
+      RAG_MINIO_SECRET_KEY: mlpsecret123
+      RAG_MINIO_BUCKET: source-files
+      RAG_MINIO_SECURE: "false"
+      RAG_NEST_BASE_URL: http://api:3333
+      RAG_NEST_SERVICE_TOKEN: ${MLP_INTERNAL_API_TOKEN:-dev_internal_service_token_0123456789abcdef}
+      RAG_SERVICE_API_TOKEN: ${MLP_SEARCH_SERVICE_TOKEN:-dev_search_service_token_0123456789abcd}
+      RAG_OLLAMA_URL: http://ollama:11434/api/chat
+      RAG_LLM_MODEL: qwen2.5:7b-instruct
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+  rag-api:
+    build:
+      context: ./apps/rag-service
+      dockerfile: Dockerfile
+    profiles: ["rag"]
+    command: python -m uvicorn rag_service.adapters.inbound.search_api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment: *rag_env
+    depends_on:
+      qdrant:
+        condition: service_started
+      ollama:
+        condition: service_started
 
 volumes:
   mlp_pg:
