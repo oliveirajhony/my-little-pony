@@ -13,10 +13,9 @@ from rag_service.application.ports import (
     SparseEmbedder,
     VectorIndex,
 )
+from rag_service.application.retrieval import retrieve_and_rerank
 from rag_service.domain.models import SearchHit, SearchQuery
 
-# Quantos candidatos o índice traz antes do rerank (recall alto).
-RERANK_CANDIDATES = 30
 SNIPPET_MAX = 280
 
 
@@ -34,25 +33,7 @@ class SearchDocuments:
         self._reranker = reranker
 
     def execute(self, query: SearchQuery) -> list[SearchHit]:
-        if not query.query.strip():
-            return []
-
-        dense_vector = self._dense.embed_query(query.query)
-        sparse_vector = self._sparse.embed_query(query.query)
-
-        candidates = self._index.search(
-            dense=dense_vector,
-            sparse=sparse_vector,
-            owner_id=query.owner_id,
-            filters=query.filters,
-            limit=RERANK_CANDIDATES,
-        )
-
-        if not candidates:
-            return []
-
-        ranked = self._reranker.rerank(query.query, candidates)
-
+        ranked = retrieve_and_rerank(query, self._dense, self._sparse, self._index, self._reranker)
         return [
             SearchHit(
                 document_id=hit.document_id,

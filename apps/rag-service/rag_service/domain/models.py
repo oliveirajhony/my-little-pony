@@ -106,6 +106,30 @@ class SearchHit:
 
 
 # --------------------------------------------------------------------------- #
+# RAG generativo (/answer)
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class AnswerSource:
+    """Trecho que fundamentou a resposta (para citar a fonte)."""
+
+    document_id: str
+    chunk_id: str
+    score: float
+    snippet: str
+    kind: str = "native"
+
+
+@dataclass(frozen=True)
+class Answer:
+    """Resposta gerada por IA, ancorada nas fontes. `grounded=False` quando
+    nenhum trecho passou do limiar (o LLM nem é chamado)."""
+
+    answer: str
+    grounded: bool
+    sources: list[AnswerSource]
+
+
+# --------------------------------------------------------------------------- #
 # Resultado de indexação (contrato do evento document.index.completed)
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True)
