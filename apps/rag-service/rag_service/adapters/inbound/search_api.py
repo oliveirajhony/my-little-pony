@@ -9,14 +9,18 @@ Os casos de uso são injetados via Depends para permitir override nos testes.
 
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, Field
+from starlette.concurrency import iterate_in_threadpool
+from starlette.responses import StreamingResponse
 
+from rag_service.adapters.inbound.sse import sse_line
+from rag_service.adapters.inbound.stream_guard import QueueFullError, SingleFlightGuard
 from rag_service.application.use_cases import AnswerQuestion, SearchDocuments
 from rag_service.composition import Composition
 from rag_service.config import get_settings
-from rag_service.domain.models import SearchQuery
+from rag_service.domain.models import AnswerSourcesEvent, SearchQuery
 from rag_service.observability import SEARCH_LATENCY, SEARCH_REQUESTS
 
 
@@ -57,6 +61,14 @@ class AnswerResponse(BaseModel):
 
 # Composition root do processo da API (adapters preguiçosos).
 _composition = Composition(get_settings())
+
+_stream_settings = get_settings()
+_guard = SingleFlightGuard(
+    limit=_stream_settings.llm_max_concurrency,
+    max_depth=_stream_settings.stream_queue_max_depth,
+    max_wait_s=_stream_settings.stream_queue_max_wait_s,
+)
+_SAFE_STREAM_ERROR = "Não consegui responder agora. Tente novamente em instantes."
 
 
 def get_search_use_case() -> SearchDocuments:
@@ -147,4 +159,48 @@ def answer(
             )
             for source in result.sources
         ],
+    )
+
+
+@app.post("/answer/stream", dependencies=[Depends(require_service_token)])
+async def answer_stream(
+    request: AnswerRequest,
+    http_request: Request,
+    use_case: AnswerQuestion = Depends(get_answer_use_case),
+) -> StreamingResponse:
+    query = SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
+
+    async def events():
+        try:
+            async with _guard.slot() as position:
+                if position > 0:
+                    yield sse_line({"type": "status", "stage": "queued", "position": position})
+                yield sse_line({"type": "status", "stage": "retrieving"})
+                grounded = True
+                async for ev in iterate_in_threadpool(use_case.stream(query)):
+                    if await http_request.is_disconnected():
+                        return  # solta o semáforo ao sair do `async with`
+                    if isinstance(ev, AnswerSourcesEvent):
+                        grounded = ev.grounded
+                        yield sse_line({
+                            "type": "sources", "grounded": ev.grounded,
+                            "sources": [
+                                {"documentId": s.document_id, "chunkId": s.chunk_id,
+                                 "score": s.score, "snippet": s.snippet, "kind": s.kind}
+                                for s in ev.sources
+                            ],
+                        })
+                        yield sse_line({"type": "status", "stage": "generating"})
+                    else:
+                        yield sse_line({"type": "token", "text": ev.text})
+                yield sse_line({"type": "done", "grounded": grounded})
+        except QueueFullError:
+            yield sse_line({"type": "error", "message": _SAFE_STREAM_ERROR})
+        except Exception:
+            yield sse_line({"type": "error", "message": _SAFE_STREAM_ERROR})
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
