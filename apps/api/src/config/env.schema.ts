@@ -24,6 +24,9 @@ export const EnvSchema = z.object({
   MINIO_ACCESS_KEY: z.string().default('mlp'),
   MINIO_SECRET_KEY: z.string().default('mlpsecret123'),
   MINIO_BUCKET: z.string().default('avatars'),
+  // Bucket dos documentos-fonte importados. O worker Python lê deste bucket
+  // (deve casar com RAG_MINIO_BUCKET) pela storageKey do descriptor interno.
+  MINIO_SOURCE_FILE_BUCKET: z.string().default('source-files'),
   // Python search/indexing service base URL. Empty until Spec 2 is deployed.
   SEARCH_SERVICE_URL: z.string().default(''),
   // Service token the search proxy sends to the Python /search (= RAG_SERVICE_API_TOKEN).
@@ -54,6 +57,7 @@ export type AppConfig = {
   minioAccessKey: string;
   minioSecretKey: string;
   minioBucket: string;
+  minioSourceFileBucket: string;
   searchServiceUrl: string;
   searchServiceToken: string;
   smtpHost: string;
@@ -91,6 +95,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     minioAccessKey: env_.MINIO_ACCESS_KEY,
     minioSecretKey: env_.MINIO_SECRET_KEY,
     minioBucket: env_.MINIO_BUCKET,
+    minioSourceFileBucket: env_.MINIO_SOURCE_FILE_BUCKET,
     searchServiceUrl: env_.SEARCH_SERVICE_URL,
     searchServiceToken: env_.SEARCH_SERVICE_TOKEN,
     smtpHost: env_.SMTP_HOST,

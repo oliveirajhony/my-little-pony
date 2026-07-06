@@ -50,7 +50,9 @@ class IndexDocument:
         self._index = index
         self._batch_size = batch_size
 
-    def execute(self, document_id: str, owner_id: str, version: int) -> IndexResult:
+    def execute(
+        self, document_id: str, owner_id: str, version: int, kind: str = "native"
+    ) -> IndexResult:
         """Indexa incrementalmente. Retorna ready; LEVANTA em falha real."""
         current = self._index.current_version(document_id)
 
@@ -63,11 +65,15 @@ class IndexDocument:
                 version,
                 current,
             )
-            return IndexResult.ready(document_id, self._index.count(document_id), embedded_count=0)
+            return IndexResult.ready(
+                document_id, self._index.count(document_id), embedded_count=0, kind=kind
+            )
 
-        logger.info("▶ Indexando %s (owner=%s, version=%s)", document_id, owner_id, version)
+        logger.info(
+            "▶ Indexando %s (owner=%s, version=%s, kind=%s)", document_id, owner_id, version, kind
+        )
 
-        raw = self._source.fetch(document_id)
+        raw = self._source.fetch(document_id, kind)
         chunks = self._chunker.chunk(raw)
         logger.info(
             "  1/3 fonte '%s' (%d bytes) chunkada: %d chunks",
@@ -79,7 +85,7 @@ class IndexDocument:
         if not chunks:
             self._index.delete_other_versions(document_id, keep_version=version)
             logger.info("  documento sem conteúdo indexável; 0 chunks")
-            return IndexResult.ready(document_id, 0, embedded_count=0)
+            return IndexResult.ready(document_id, 0, embedded_count=0, kind=kind)
 
         # Retomada: descobre o que já está indexado (nesta versão) e embeda só o resto.
         chunk_ids = [chunk.chunk_id for chunk in chunks]
@@ -104,6 +110,7 @@ class IndexDocument:
                             chunk=chunk,
                             dense=dense_vector,
                             sparse=sparse_vector,
+                            kind=kind,
                         )
                         for chunk, dense_vector, sparse_vector in zip(
                             batch, dense_vectors, sparse_vectors, strict=False
@@ -125,4 +132,4 @@ class IndexDocument:
         self._index.delete_other_versions(document_id, keep_version=version)
         logger.info("  3/3 versões antigas removidas; documento em v%s", version)
 
-        return IndexResult.ready(document_id, len(chunks), embedded_count=len(missing))
+        return IndexResult.ready(document_id, len(chunks), embedded_count=len(missing), kind=kind)

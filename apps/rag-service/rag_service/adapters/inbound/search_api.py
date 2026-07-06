@@ -1,9 +1,10 @@
-"""Adapter de entrada: API HTTP de busca (FastAPI).
+"""Adapter de entrada: API HTTP (FastAPI) de busca e RAG.
 
-Contrato (Spec 1, §8):
-    POST /search { query, ownerId, filters } -> [{ documentId, chunkId, score, snippet }]
+Contrato:
+    POST /search { query, ownerId, filters } -> [{ documentId, chunkId, score, snippet, kind }]
+    POST /answer { query, ownerId, filters } -> { answer, grounded, sources[] }
 
-O caso de uso é injetado via Depends para permitir override nos testes (com fake).
+Os casos de uso são injetados via Depends para permitir override nos testes.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, Field
 
-from rag_service.application.use_cases import SearchDocuments
+from rag_service.application.use_cases import AnswerQuestion, SearchDocuments
 from rag_service.composition import Composition
 from rag_service.config import get_settings
 from rag_service.domain.models import SearchQuery
@@ -31,6 +32,27 @@ class SearchHitResponse(BaseModel):
     chunkId: str
     score: float
     snippet: str
+    kind: str = "native"
+
+
+class AnswerRequest(BaseModel):
+    query: str
+    ownerId: str
+    filters: dict = Field(default_factory=dict)
+
+
+class AnswerSourceResponse(BaseModel):
+    documentId: str
+    chunkId: str
+    score: float
+    snippet: str
+    kind: str = "native"
+
+
+class AnswerResponse(BaseModel):
+    answer: str
+    grounded: bool
+    sources: list[AnswerSourceResponse]
 
 
 # Composition root do processo da API (adapters preguiçosos).
@@ -39,6 +61,10 @@ _composition = Composition(get_settings())
 
 def get_search_use_case() -> SearchDocuments:
     return _composition.search_documents()
+
+
+def get_answer_use_case() -> AnswerQuestion:
+    return _composition.answer_question()
 
 
 def require_service_token(authorization: str | None = Header(default=None)) -> None:
@@ -90,6 +116,35 @@ def search(
             chunkId=hit.chunk_id,
             score=hit.score,
             snippet=hit.snippet,
+            kind=hit.kind,
         )
         for hit in hits
     ]
+
+
+@app.post(
+    "/answer",
+    response_model=AnswerResponse,
+    dependencies=[Depends(require_service_token)],
+)
+def answer(
+    request: AnswerRequest,
+    use_case: AnswerQuestion = Depends(get_answer_use_case),
+) -> AnswerResponse:
+    result = use_case.execute(
+        SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
+    )
+    return AnswerResponse(
+        answer=result.answer,
+        grounded=result.grounded,
+        sources=[
+            AnswerSourceResponse(
+                documentId=source.document_id,
+                chunkId=source.chunk_id,
+                score=source.score,
+                snippet=source.snippet,
+                kind=source.kind,
+            )
+            for source in result.sources
+        ],
+    )

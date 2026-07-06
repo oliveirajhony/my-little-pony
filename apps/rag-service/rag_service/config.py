@@ -62,6 +62,17 @@ class Settings(BaseSettings):
     dense_backend: str = "local"
     dense_service_url: str = "http://localhost:8080"
 
+    # RAG generativo (/answer): LLM local via Ollama (como o v2).
+    ollama_url: str = "http://localhost:11434/api/chat"
+    llm_model: str = "qwen2.5:7b-instruct"
+    ollama_timeout: float = 300.0
+    # Só entram no contexto trechos com score de rerank >= limiar (anti-alucinação).
+    answer_min_score: float = 0.05
+    # Quantos trechos, no máximo, viram contexto do LLM.
+    answer_top_k: int = 5
+    # Teto do contexto (chars) para não estourar a janela do modelo.
+    answer_max_context_chars: int = 8000
+
 
 @lru_cache
 def get_settings() -> Settings:

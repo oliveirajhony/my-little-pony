@@ -23,13 +23,15 @@ from uuid import uuid4
 
 import pika
 
-from rag_service.application.use_cases import IndexDocument
+from rag_service.application.use_cases import DeindexDocument, IndexDocument
 from rag_service.contracts import (
     EXCHANGE,
     HEADER_RETRY_COUNT,
+    QUEUE_DEINDEX_REQUESTED,
     QUEUE_INDEX_DLQ,
     QUEUE_INDEX_REQUESTED,
     QUEUE_INDEX_RETRY,
+    ROUTING_DEINDEX_REQUESTED,
     ROUTING_INDEX_REQUESTED,
 )
 from rag_service.domain.models import IndexResult
@@ -61,6 +63,7 @@ class RabbitIndexConsumer:
         url: str,
         index_document: IndexDocument,
         publisher,
+        deindex_document: DeindexDocument | None = None,
         max_retries: int = 3,
         retry_ttl_ms: int = 10_000,
         heartbeat: int = 600,
@@ -70,6 +73,7 @@ class RabbitIndexConsumer:
         self._params = pika.URLParameters(url)
         self._params.heartbeat = heartbeat
         self._use_case = index_document
+        self._deindex = deindex_document
         self._publisher = publisher
         self._max_retries = max_retries
         self._retry_ttl_ms = retry_ttl_ms
@@ -85,6 +89,7 @@ class RabbitIndexConsumer:
             document_id = data["documentId"]
             owner_id = data["ownerId"]
             version = int(data.get("version", 0))
+            source_kind = data.get("kind", "native")
         except (json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
             # Não dá para reportar completed (sem documentId confiável) → DLQ.
             return _Action(kind="park", body=body, reason=f"malformed: {error}")
@@ -92,7 +97,7 @@ class RabbitIndexConsumer:
         correlation_id = data.get("correlationId") or str(uuid4())
 
         try:
-            result = self._use_case.execute(document_id, owner_id, version)
+            result = self._use_case.execute(document_id, owner_id, version, source_kind)
         except Exception as error:  # noqa: BLE001 - decidimos retry/DLQ, não engolimos
             if retry_count < self._max_retries:
                 data["correlationId"] = correlation_id
@@ -107,7 +112,7 @@ class RabbitIndexConsumer:
                 kind="park",
                 body=body,
                 reason=str(error),
-                result=IndexResult.failed(document_id, str(error)),
+                result=IndexResult.failed(document_id, str(error), kind=source_kind),
                 correlation_id=correlation_id,
             )
 
@@ -177,6 +182,19 @@ class RabbitIndexConsumer:
         self._apply(channel, action)
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
+    def _handle_deindex(self, channel, method, _properties, body: bytes) -> None:
+        """De-indexa uma fonte removida. Sempre ACK: falha aqui só deixa
+        vetores órfãos, filtrados no enrichment do Nest (fonte já não existe)."""
+        try:
+            document_id = json.loads(body)["documentId"]
+            if self._deindex is not None:
+                self._deindex.execute(document_id)
+        except (json.JSONDecodeError, KeyError, TypeError) as error:
+            logger.error("✖ deindex malformado, ignorando: %s", error)
+        except Exception as error:  # noqa: BLE001 - órfãos são inofensivos; não trava a fila
+            logger.warning("⚠ falha ao de-indexar (vetores órfãos): %s", error)
+        channel.basic_ack(delivery_tag=method.delivery_tag)
+
     # ------------------------------------------------------------------ #
     # Topologia + loops
     # ------------------------------------------------------------------ #
@@ -198,6 +216,14 @@ class RabbitIndexConsumer:
         )
         # DLQ: parking lot (não é consumida automaticamente).
         channel.queue_declare(queue=QUEUE_INDEX_DLQ, durable=True)
+        # Fila de de-indexação (fonte removida): descarta os vetores.
+        if self._deindex is not None:
+            channel.queue_declare(queue=QUEUE_DEINDEX_REQUESTED, durable=True)
+            channel.queue_bind(
+                queue=QUEUE_DEINDEX_REQUESTED,
+                exchange=self._exchange,
+                routing_key=ROUTING_DEINDEX_REQUESTED,
+            )
         channel.basic_qos(prefetch_count=1)
 
     def start(self) -> None:
@@ -207,6 +233,10 @@ class RabbitIndexConsumer:
         self._setup(channel)
         logger.info("Worker consumindo a fila '%s'...", self._queue)
         channel.basic_consume(queue=self._queue, on_message_callback=self._handle)
+        if self._deindex is not None:
+            channel.basic_consume(
+                queue=QUEUE_DEINDEX_REQUESTED, on_message_callback=self._handle_deindex
+            )
         channel.start_consuming()
 
     def process_pending(self, max_messages: int = 100, timeout: float = 2.0) -> int:

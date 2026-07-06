@@ -30,7 +30,10 @@ def build(content: dict[str, str], max_retries: int = 2):
         index=index,
     )
     consumer = RabbitIndexConsumer(
-        url="amqp://x", index_document=use_case, publisher=RecordingPublisher(), max_retries=max_retries
+        url="amqp://x",
+        index_document=use_case,
+        publisher=RecordingPublisher(),
+        max_retries=max_retries,
     )
     return consumer, index
 
@@ -102,3 +105,50 @@ def test_stale_event_decides_completed_ready():
     assert action.result.status == "ready"
     assert action.result.embedded_count == 0
     assert all(c.version == 5 for c in index.all())  # não regrediu
+
+
+def test_kind_flows_from_message_to_completed_and_payload():
+    consumer, index = build({"doc-1": HTML})
+
+    action = consumer._decide(
+        msg(documentId="doc-1", ownerId="o", version=1, kind="file"), retry_count=0
+    )
+
+    assert action.result.kind == "file"
+    # e o payload dos chunks carimba o kind (para a busca distinguir arquivo).
+    assert all(c.kind == "file" for c in index.all())
+
+
+def test_deindex_handle_deletes_vectors_and_acks():
+    from rag_service.application.use_cases import DeindexDocument
+
+    index = InMemoryVectorIndex()
+    use_case = IndexDocument(
+        source=FakeDocumentSource({"doc-1": HTML}),
+        chunker=FakeChunker(),
+        dense=FakeDenseEmbedder(),
+        sparse=FakeSparseEmbedder(),
+        index=index,
+    )
+    consumer = RabbitIndexConsumer(
+        url="amqp://x",
+        index_document=use_case,
+        publisher=RecordingPublisher(),
+        deindex_document=DeindexDocument(index),
+    )
+    use_case.execute("doc-1", "o", version=1, kind="file")
+    assert index.count("doc-1") > 0
+
+    acked: list[int] = []
+
+    class _Channel:
+        def basic_ack(self, delivery_tag: int) -> None:
+            acked.append(delivery_tag)
+
+    class _Method:
+        delivery_tag = 7
+
+    consumer._handle_deindex(_Channel(), _Method(), None, msg(documentId="doc-1", kind="file"))
+
+    assert index.count("doc-1") == 0
+    assert acked == [7]

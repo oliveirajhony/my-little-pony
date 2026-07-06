@@ -2,7 +2,10 @@ import { DomainError } from '../domain/errors.js';
 import type { SourceFile } from '../domain/source-file.js';
 import type {
   Clock,
+  DeindexRequested,
+  EventPublisher,
   IdGenerator,
+  IndexRequested,
   SourceFileRepository,
   SourceFileStorage,
   StoredSourceFile,
@@ -12,6 +15,7 @@ import {
   GetSourceFileContent,
   ImportSourceFile,
   ListSourceFiles,
+  MarkSourceFileIndexed,
 } from './source-file-use-cases.js';
 
 const clock: Clock = { now: () => new Date('2026-07-06T00:00:00.000Z') };
@@ -54,8 +58,24 @@ class FakeStorage implements SourceFileStorage {
   }
 }
 
+class FakeEvents implements EventPublisher {
+  indexed: IndexRequested[] = [];
+  deindexed: DeindexRequested[] = [];
+  async indexRequested(e: IndexRequested) {
+    this.indexed.push(e);
+  }
+  async deindexRequested(e: DeindexRequested) {
+    this.deindexed.push(e);
+  }
+  async documentPdfRequested() {}
+  async documentPdfEmailRequested() {}
+}
+
+let events: FakeEvents;
+
 beforeEach(() => {
   seq = 0;
+  events = new FakeEvents();
 });
 
 describe('ImportSourceFile', () => {
@@ -63,7 +83,7 @@ describe('ImportSourceFile', () => {
     const repo = new FakeRepo();
     const storage = new FakeStorage();
     const data = new Uint8Array([1, 2, 3, 4, 5]);
-    const file = await new ImportSourceFile(repo, storage, ids, clock).execute({
+    const file = await new ImportSourceFile(repo, storage, ids, clock, events).execute({
       ownerId: 'u1',
       filename: 'contrato.pdf',
       contentType: 'application/pdf',
@@ -75,13 +95,14 @@ describe('ImportSourceFile', () => {
     expect(file.sizeBytes).toBe(5);
     expect(repo.byId.get('f1')).toBeDefined();
     expect(storage.objects.get('u1:f1')).toEqual({ data, contentType: 'application/pdf' });
+    expect(events.indexed).toEqual([{ documentId: 'f1', ownerId: 'u1', version: 1, kind: 'file' }]);
   });
 
   it('rejects an unsupported extension without touching storage', async () => {
     const repo = new FakeRepo();
     const storage = new FakeStorage();
     await expect(
-      new ImportSourceFile(repo, storage, ids, clock).execute({
+      new ImportSourceFile(repo, storage, ids, clock, events).execute({
         ownerId: 'u1',
         filename: 'planilha.xlsx',
         contentType: 'application/vnd.ms-excel',
@@ -97,7 +118,7 @@ describe('ListSourceFiles', () => {
   it("returns only the owner's files", async () => {
     const repo = new FakeRepo();
     const storage = new FakeStorage();
-    const importer = new ImportSourceFile(repo, storage, ids, clock);
+    const importer = new ImportSourceFile(repo, storage, ids, clock, events);
     await importer.execute({
       ownerId: 'u1',
       filename: 'a.pdf',
@@ -121,7 +142,7 @@ describe('GetSourceFileContent', () => {
   it('returns the bytes and filename for the owner', async () => {
     const repo = new FakeRepo();
     const storage = new FakeStorage();
-    await new ImportSourceFile(repo, storage, ids, clock).execute({
+    await new ImportSourceFile(repo, storage, ids, clock, events).execute({
       ownerId: 'u1',
       filename: 'x.md',
       contentType: 'text/markdown',
@@ -138,7 +159,7 @@ describe('GetSourceFileContent', () => {
   it('rejects access by a non-owner (forbidden)', async () => {
     const repo = new FakeRepo();
     const storage = new FakeStorage();
-    await new ImportSourceFile(repo, storage, ids, clock).execute({
+    await new ImportSourceFile(repo, storage, ids, clock, events).execute({
       ownerId: 'u1',
       filename: 'x.md',
       contentType: 'text/markdown',
@@ -158,32 +179,57 @@ describe('GetSourceFileContent', () => {
   });
 });
 
-describe('DeleteSourceFile', () => {
-  it('removes metadata and bytes for the owner', async () => {
+describe('MarkSourceFileIndexed', () => {
+  it('applies the pipeline result to the file (ready sets indexedAt)', async () => {
     const repo = new FakeRepo();
     const storage = new FakeStorage();
-    await new ImportSourceFile(repo, storage, ids, clock).execute({
+    const file = await new ImportSourceFile(repo, storage, ids, clock, events).execute({
       ownerId: 'u1',
       filename: 'x.pdf',
       contentType: 'application/pdf',
       data: new Uint8Array([1]),
     });
-    await new DeleteSourceFile(repo, storage).execute({ ownerId: 'u1', id: 'f1' });
+    expect(file.indexStatus).toBe('indexing');
+
+    await new MarkSourceFileIndexed(repo, clock).execute({ id: 'f1', status: 'ready' });
+    expect((await repo.findById('f1'))?.indexStatus).toBe('ready');
+  });
+
+  it('is a no-op for an unknown id', async () => {
+    const repo = new FakeRepo();
+    await expect(
+      new MarkSourceFileIndexed(repo, clock).execute({ id: 'ghost', status: 'ready' }),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe('DeleteSourceFile', () => {
+  it('removes metadata and bytes for the owner', async () => {
+    const repo = new FakeRepo();
+    const storage = new FakeStorage();
+    await new ImportSourceFile(repo, storage, ids, clock, events).execute({
+      ownerId: 'u1',
+      filename: 'x.pdf',
+      contentType: 'application/pdf',
+      data: new Uint8Array([1]),
+    });
+    await new DeleteSourceFile(repo, storage, events).execute({ ownerId: 'u1', id: 'f1' });
     expect(repo.byId.size).toBe(0);
     expect(storage.objects.size).toBe(0);
+    expect(events.deindexed).toEqual([{ documentId: 'f1', ownerId: 'u1', kind: 'file' }]);
   });
 
   it('rejects deletion by a non-owner', async () => {
     const repo = new FakeRepo();
     const storage = new FakeStorage();
-    await new ImportSourceFile(repo, storage, ids, clock).execute({
+    await new ImportSourceFile(repo, storage, ids, clock, events).execute({
       ownerId: 'u1',
       filename: 'x.pdf',
       contentType: 'application/pdf',
       data: new Uint8Array([1]),
     });
     await expect(
-      new DeleteSourceFile(repo, storage).execute({ ownerId: 'u2', id: 'f1' }),
+      new DeleteSourceFile(repo, storage, events).execute({ ownerId: 'u2', id: 'f1' }),
     ).rejects.toMatchObject({ code: 'forbidden' });
     expect(repo.byId.size).toBe(1);
   });

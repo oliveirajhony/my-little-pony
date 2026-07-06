@@ -1,7 +1,9 @@
+import type { IndexStatus } from '../domain/document.js';
 import { DomainError } from '../domain/errors.js';
 import { SourceFile } from '../domain/source-file.js';
 import type {
   Clock,
+  EventPublisher,
   IdGenerator,
   SourceFileRepository,
   SourceFileStorage,
@@ -20,13 +22,17 @@ async function loadOwned(
   return file;
 }
 
-/** Importa (faz upload de) um documento-fonte: grava os bytes e os metadados. */
+/**
+ * Importa (faz upload de) um documento-fonte: grava os bytes e os metadados e
+ * pede a indexação (fila -> worker Python) para o arquivo ficar buscável/RAG.
+ */
 export class ImportSourceFile {
   constructor(
     private readonly repo: SourceFileRepository,
     private readonly storage: SourceFileStorage,
     private readonly ids: IdGenerator,
     private readonly clock: Clock,
+    private readonly events: EventPublisher,
   ) {}
 
   async execute(input: {
@@ -50,6 +56,12 @@ export class ImportSourceFile {
       contentType: file.contentType,
     });
     await this.repo.save(file);
+    await this.events.indexRequested({
+      documentId: file.id,
+      ownerId: file.ownerId,
+      version: file.version,
+      kind: 'file',
+    });
     return file;
   }
 }
@@ -80,15 +92,40 @@ export class GetSourceFileContent {
   }
 }
 
+/**
+ * Aplica o resultado do pipeline de indexação a um arquivo (vindo da fila).
+ * System-level: sem checagem de dono. Arquivo removido no meio é ignorado.
+ */
+export class MarkSourceFileIndexed {
+  constructor(
+    private readonly repo: SourceFileRepository,
+    private readonly clock: Clock,
+  ) {}
+
+  async execute(input: { id: string; status: IndexStatus }): Promise<void> {
+    const file = await this.repo.findById(input.id);
+    if (!file) return;
+    file.setIndexStatus(input.status, this.clock.now());
+    await this.repo.save(file);
+  }
+}
+
 export class DeleteSourceFile {
   constructor(
     private readonly repo: SourceFileRepository,
     private readonly storage: SourceFileStorage,
+    private readonly events: EventPublisher,
   ) {}
 
   async execute(input: { ownerId: string; id: string }): Promise<void> {
     const file = await loadOwned(this.repo, input.id, input.ownerId);
     await this.repo.delete(file.id);
     await this.storage.remove({ ownerId: file.ownerId, fileId: file.id });
+    // Remove os vetores do índice para o arquivo sumir da busca/RAG.
+    await this.events.deindexRequested({
+      documentId: file.id,
+      ownerId: file.ownerId,
+      kind: 'file',
+    });
   }
 }

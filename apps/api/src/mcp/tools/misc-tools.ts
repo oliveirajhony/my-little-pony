@@ -106,4 +106,32 @@ export const miscTools: ToolDef[] = [
       return { results };
     },
   },
+  {
+    name: 'search_files',
+    title: 'Buscar em arquivos',
+    description:
+      'Busca híbrida nos arquivos importados do usuário (PDF/DOCX/MD/HTML). Retorna só trechos de arquivos, com nome e score.',
+    scope: 'files:read',
+    annotations: { readOnlyHint: true },
+    inputSchema: { q: z.string() },
+    handle: async (ctx, args) => {
+      const hits = await ctx.uc.searchDocuments.execute({
+        ownerId: ctx.ownerId,
+        q: args.q as string,
+      });
+      return { results: hits.filter((hit) => hit.kind === 'file') };
+    },
+  },
+  {
+    name: 'ask_files',
+    title: 'Perguntar aos documentos',
+    description:
+      'RAG: responde em linguagem natural com base nos documentos e arquivos do usuário, citando as fontes. Diz que não encontrou quando não há base suficiente.',
+    scope: 'files:read',
+    annotations: { readOnlyHint: true },
+    inputSchema: { q: z.string() },
+    handle: async (ctx, args) => {
+      return ctx.uc.answerQuestion.execute({ ownerId: ctx.ownerId, q: args.q as string });
+    },
+  },
 ];

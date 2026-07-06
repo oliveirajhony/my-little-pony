@@ -9,6 +9,7 @@ import { CreateContactMessages1751846400000 } from './migrations/1751846400000-C
 import { AddDocumentPageConfig1751932800000 } from './migrations/1751932800000-AddDocumentPageConfig';
 import { CreatePersonalAccessTokens1751933000000 } from './migrations/1751933000000-CreatePersonalAccessTokens';
 import { CreateSourceFiles1751933100000 } from './migrations/1751933100000-CreateSourceFiles';
+import { AddSourceFileIndexColumns1751933200000 } from './migrations/1751933200000-AddSourceFileIndexColumns';
 import { PersonalAccessTokenOrmEntity } from './personal-access-token.orm-entity';
 import { SourceFileOrmEntity } from './source-file.orm-entity';
 import { UserOrmEntity } from './user.orm-entity';
@@ -34,6 +35,7 @@ export function buildTypeOrmOptions(databaseUrl: string): DataSourceOptions {
       AddDocumentPageConfig1751932800000,
       CreatePersonalAccessTokens1751933000000,
       CreateSourceFiles1751933100000,
+      AddSourceFileIndexColumns1751933200000,
     ],
     synchronize: false,
   };

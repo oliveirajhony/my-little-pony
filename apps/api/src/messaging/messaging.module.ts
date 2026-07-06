@@ -4,7 +4,9 @@ import {
   type DocumentRepository,
   GenerateDocumentPdf,
   MarkDocumentIndexed,
+  MarkSourceFileIndexed,
   type PdfRenderer,
+  type SourceFileRepository,
 } from '@my-little-pony/core';
 import { Global, Module } from '@nestjs/common';
 import {
@@ -13,6 +15,7 @@ import {
   DOCUMENT_REPOSITORY,
   EVENT_PUBLISHER,
   PDF_RENDERER,
+  SOURCE_FILE_REPOSITORY,
 } from '../tokens';
 import { IndexCompletionConsumer } from './index-completion.consumer';
 import { PdfEmailConsumer } from './pdf-email.consumer';
@@ -38,6 +41,12 @@ import { RabbitEventPublisher } from './rabbit-event-publisher';
       provide: MarkDocumentIndexed,
       inject: [DOCUMENT_REPOSITORY, CLOCK],
       useFactory: (repo: DocumentRepository, clock: Clock) => new MarkDocumentIndexed(repo, clock),
+    },
+    {
+      provide: MarkSourceFileIndexed,
+      inject: [SOURCE_FILE_REPOSITORY, CLOCK],
+      useFactory: (repo: SourceFileRepository, clock: Clock) =>
+        new MarkSourceFileIndexed(repo, clock),
     },
     {
       provide: GenerateDocumentPdf,

@@ -1,6 +1,14 @@
 import type { SourceFileStorage, StoredSourceFile } from '@my-little-pony/core';
 import { Client } from 'minio';
 
+/**
+ * Chave do objeto no bucket dos documentos-fonte. É o mesmo valor que vai no
+ * descriptor interno (`storageKey`) e que o worker Python usa para ler os bytes.
+ */
+export function sourceFileStorageKey(ownerId: string, fileId: string): string {
+  return `source-files/${ownerId}/${fileId}`;
+}
+
 export type MinioSourceFileStorageOptions = {
   endPoint: string;
   port: number;
@@ -12,9 +20,8 @@ export type MinioSourceFileStorageOptions = {
 
 /**
  * SourceFileStorage sobre MinIO. Um blob por documento-fonte, com chave
- * `source-files/{ownerId}/{fileId}` no bucket privado (SSE por padrão).
- * Reusa o mesmo bucket dos avatares/PDFs (chaves não colidem). O contentType
- * é guardado no metadata do objeto e recuperado no `get` (tipos variados).
+ * `source-files/{ownerId}/{fileId}` no bucket privado dedicado (SSE por padrão).
+ * O contentType é guardado no metadata do objeto e recuperado no `get`.
  */
 export class MinioSourceFileStorage implements SourceFileStorage {
   private readonly client: Client;
@@ -33,7 +40,7 @@ export class MinioSourceFileStorage implements SourceFileStorage {
   }
 
   private key(ownerId: string, fileId: string): string {
-    return `source-files/${ownerId}/${fileId}`;
+    return sourceFileStorageKey(ownerId, fileId);
   }
 
   async put(input: {
