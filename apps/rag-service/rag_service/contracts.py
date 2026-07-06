@@ -4,7 +4,7 @@ Nomes de evento e payloads em camelCase para casar com o Nest.
 """
 
 # Exchange topic onde trafegam os eventos de indexação.
-EXCHANGE = "documents"
+EXCHANGE = "mlp.documents"
 
 # Nest -> Python: pedido de indexação.
 ROUTING_INDEX_REQUESTED = "document.index.requested"
