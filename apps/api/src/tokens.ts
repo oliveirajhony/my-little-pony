@@ -1,6 +1,7 @@
 // Nest injection tokens for the framework-free ports declared in @my-little-pony/core.
 export const USER_REPOSITORY = Symbol('UserRepository');
 export const DOCUMENT_REPOSITORY = Symbol('DocumentRepository');
+export const CONTACT_MESSAGE_REPOSITORY = Symbol('ContactMessageRepository');
 export const EVENT_PUBLISHER = Symbol('EventPublisher');
 export const CACHE_STORE = Symbol('CacheStore');
 export const SEARCH_GATEWAY = Symbol('SearchGateway');

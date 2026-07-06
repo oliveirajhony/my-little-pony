@@ -35,6 +35,10 @@ const MAP: Record<DomainErrorCode, { status: number; message: string }> = {
     message: 'O documento foi alterado em outro lugar. Recarregue e tente de novo.',
   },
   'slug-taken': { status: HttpStatus.CONFLICT, message: 'Este endereço (slug) já está em uso.' },
+  'invalid-contact': {
+    status: HttpStatus.BAD_REQUEST,
+    message: 'Confira o nome, o e-mail e a mensagem.',
+  },
 };
 
 @Catch(DomainError)

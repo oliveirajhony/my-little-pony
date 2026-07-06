@@ -116,7 +116,7 @@ export function PublishedDoc({ doc, ownerId }: { doc: PublicDoc; ownerId: string
                 </p>
               </div>
               <div className="mt-6">
-                <ContactForm />
+                <ContactForm ownerId={ownerId} slug={doc.slug} />
               </div>
             </Reveal>
           </div>
