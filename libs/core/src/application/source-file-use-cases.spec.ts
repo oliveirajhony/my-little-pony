@@ -15,6 +15,7 @@ import {
   GetSourceFileContent,
   ImportSourceFile,
   ListSourceFiles,
+  MarkSourceFileIndexed,
 } from './source-file-use-cases.js';
 
 const clock: Clock = { now: () => new Date('2026-07-06T00:00:00.000Z') };
@@ -175,6 +176,30 @@ describe('GetSourceFileContent', () => {
     await expect(
       new GetSourceFileContent(repo, storage).execute({ ownerId: 'u1', id: 'nope' }),
     ).rejects.toMatchObject({ code: 'file-not-found' });
+  });
+});
+
+describe('MarkSourceFileIndexed', () => {
+  it('applies the pipeline result to the file (ready sets indexedAt)', async () => {
+    const repo = new FakeRepo();
+    const storage = new FakeStorage();
+    const file = await new ImportSourceFile(repo, storage, ids, clock, events).execute({
+      ownerId: 'u1',
+      filename: 'x.pdf',
+      contentType: 'application/pdf',
+      data: new Uint8Array([1]),
+    });
+    expect(file.indexStatus).toBe('indexing');
+
+    await new MarkSourceFileIndexed(repo, clock).execute({ id: 'f1', status: 'ready' });
+    expect((await repo.findById('f1'))?.indexStatus).toBe('ready');
+  });
+
+  it('is a no-op for an unknown id', async () => {
+    const repo = new FakeRepo();
+    await expect(
+      new MarkSourceFileIndexed(repo, clock).execute({ id: 'ghost', status: 'ready' }),
+    ).resolves.toBeUndefined();
   });
 });
 

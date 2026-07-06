@@ -1,9 +1,14 @@
-import { MarkDocumentIndexed } from '@my-little-pony/core';
+import { MarkDocumentIndexed, MarkSourceFileIndexed } from '@my-little-pony/core';
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { RabbitConnection } from './rabbit.connection';
 import { DOCUMENTS_EXCHANGE, INDEX_COMPLETED_QUEUE, RK_INDEX_COMPLETED } from './rabbit.constants';
 
-type CompletedPayload = { documentId: string; status: 'ready' | 'failed'; chunkCount?: number };
+type CompletedPayload = {
+  documentId: string;
+  status: 'ready' | 'failed';
+  chunkCount?: number;
+  kind?: 'native' | 'file';
+};
 
 /** Consumes indexing-completion events from the Python worker and applies them. */
 @Injectable()
@@ -13,6 +18,7 @@ export class IndexCompletionConsumer implements OnModuleInit {
   constructor(
     private readonly connection: RabbitConnection,
     private readonly markIndexed: MarkDocumentIndexed,
+    private readonly markFileIndexed: MarkSourceFileIndexed,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -33,10 +39,14 @@ export class IndexCompletionConsumer implements OnModuleInit {
       }
 
       try {
-        await this.markIndexed.execute({
-          documentId: payload.documentId,
-          status: payload.status,
-        });
+        if (payload.kind === 'file') {
+          await this.markFileIndexed.execute({ id: payload.documentId, status: payload.status });
+        } else {
+          await this.markIndexed.execute({
+            documentId: payload.documentId,
+            status: payload.status,
+          });
+        }
         channel.ack(message);
       } catch (error) {
         if (message.fields.redelivered) {
