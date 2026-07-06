@@ -1,12 +1,11 @@
 'use client';
 
-import { Check } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { asApiError } from '../../../lib/api-client';
 import { useAuth } from '../../../lib/auth-store';
+import { SettingsFormFooter } from './settings-form-footer';
 
 const MIN_PASSWORD = 8;
 
@@ -45,7 +44,7 @@ export function PasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-sm space-y-5">
+    <form onSubmit={onSubmit} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="current-password">Senha atual</Label>
         <Input
@@ -56,37 +55,36 @@ export function PasswordForm() {
           placeholder="••••••••"
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="new-password">Nova senha</Label>
-        <Input
-          id="new-password"
-          type="password"
-          value={next}
-          onChange={(e) => setNext(e.target.value)}
-          placeholder="••••••••"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="confirm-password">Confirmar nova senha</Label>
-        <Input
-          id="confirm-password"
-          type="password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          placeholder="••••••••"
-        />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="new-password">Nova senha</Label>
+          <Input
+            id="new-password"
+            type="password"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            placeholder="••••••••"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+          <Input
+            id="confirm-password"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder="••••••••"
+          />
+        </div>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex items-center justify-end gap-3">
-        {status === 'saved' && (
-          <span className="flex items-center gap-1 text-sm text-primary">
-            <Check className="size-4" /> Senha atualizada
-          </span>
-        )}
-        <Button type="submit" disabled={status === 'saving'}>
-          {status === 'saving' ? 'Atualizando…' : 'Atualizar senha'}
-        </Button>
-      </div>
+      <SettingsFormFooter
+        saving={status === 'saving'}
+        saved={status === 'saved'}
+        label="Atualizar senha"
+        savingLabel="Atualizando…"
+        savedLabel="Senha atualizada"
+      />
     </form>
   );
 }

@@ -35,7 +35,17 @@ export {
   SaveDraft,
   UnpublishDocument,
 } from './application/document-use-cases.js';
+export {
+  AuthenticatePersonalAccessToken,
+  type CreatedAccessToken,
+  CreatePersonalAccessToken,
+  ListPersonalAccessTokens,
+  PurgeExpiredTokens,
+  RevokePersonalAccessToken,
+  UpdatePersonalAccessToken,
+} from './application/pat-use-cases.js';
 export type {
+  AccessTokenGenerator,
   AvatarStorage,
   CacheStore,
   Clock,
@@ -50,13 +60,18 @@ export type {
   DocumentRepository,
   EmailSender,
   EventPublisher,
+  GeneratedAccessToken,
   IdGenerator,
   PasswordHasher,
   PdfRenderer,
+  PersonalAccessTokenRepository,
   RefreshTokenStore,
   SearchGateway,
   SearchHit,
+  SourceFileRepository,
+  SourceFileStorage,
   StoredAvatar,
+  StoredSourceFile,
   TokenService,
   UserRepository,
 } from './application/ports.js';
@@ -69,6 +84,12 @@ export {
   SearchDocuments,
   type SearchResultItem,
 } from './application/search-use-cases.js';
+export {
+  DeleteSourceFile,
+  GetSourceFileContent,
+  ImportSourceFile,
+  ListSourceFiles,
+} from './application/source-file-use-cases.js';
 export { ContactMessage, type ContactMessageProps } from './domain/contact-message.js';
 export {
   Document,
@@ -77,4 +98,31 @@ export {
   type IndexStatus,
 } from './domain/document.js';
 export { DomainError, type DomainErrorCode } from './domain/errors.js';
+export {
+  clonePageConfig,
+  DEFAULT_PAGE_CONFIG,
+  DOCUMENT_THEMES,
+  type DocumentTheme,
+  mergePageConfig,
+  PAGE_ORIENTATIONS,
+  PAPER_SIZES,
+  type PageConfig,
+  type PageConfigPatch,
+  type PageMargins,
+  type PageOrientation,
+  type PaperSize,
+} from './domain/page-config.js';
+export {
+  PAT_SCOPES,
+  type PatScope,
+  PersonalAccessToken,
+  type PersonalAccessTokenProps,
+} from './domain/personal-access-token.js';
+export {
+  kindFromFilename,
+  SOURCE_FILE_KINDS,
+  SourceFile,
+  type SourceFileKind,
+  type SourceFileProps,
+} from './domain/source-file.js';
 export { User, type UserProps } from './domain/user.js';

@@ -3,12 +3,22 @@ import { getDataSourceToken, TypeOrmModule } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
 import { APP_CONFIG } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
-import { CONTACT_MESSAGE_REPOSITORY, DOCUMENT_REPOSITORY, USER_REPOSITORY } from '../tokens';
+import {
+  CONTACT_MESSAGE_REPOSITORY,
+  DOCUMENT_REPOSITORY,
+  PERSONAL_ACCESS_TOKEN_REPOSITORY,
+  SOURCE_FILE_REPOSITORY,
+  USER_REPOSITORY,
+} from '../tokens';
 import { ContactMessageOrmEntity } from './contact-message.orm-entity';
 import { buildTypeOrmOptions } from './data-source';
 import { DocumentOrmEntity } from './document.orm-entity';
+import { PersonalAccessTokenOrmEntity } from './personal-access-token.orm-entity';
+import { SourceFileOrmEntity } from './source-file.orm-entity';
 import { TypeOrmContactMessageRepository } from './typeorm-contact-message.repository';
 import { TypeOrmDocumentRepository } from './typeorm-document.repository';
+import { TypeOrmPersonalAccessTokenRepository } from './typeorm-personal-access-token.repository';
+import { TypeOrmSourceFileRepository } from './typeorm-source-file.repository';
 import { TypeOrmUserRepository } from './typeorm-user.repository';
 import { UserOrmEntity } from './user.orm-entity';
 
@@ -44,7 +54,27 @@ import { UserOrmEntity } from './user.orm-entity';
       useFactory: (dataSource: DataSource) =>
         new TypeOrmContactMessageRepository(dataSource.getRepository(ContactMessageOrmEntity)),
     },
+    {
+      provide: PERSONAL_ACCESS_TOKEN_REPOSITORY,
+      inject: [getDataSourceToken()],
+      useFactory: (dataSource: DataSource) =>
+        new TypeOrmPersonalAccessTokenRepository(
+          dataSource.getRepository(PersonalAccessTokenOrmEntity),
+        ),
+    },
+    {
+      provide: SOURCE_FILE_REPOSITORY,
+      inject: [getDataSourceToken()],
+      useFactory: (dataSource: DataSource) =>
+        new TypeOrmSourceFileRepository(dataSource.getRepository(SourceFileOrmEntity)),
+    },
   ],
-  exports: [USER_REPOSITORY, DOCUMENT_REPOSITORY, CONTACT_MESSAGE_REPOSITORY],
+  exports: [
+    USER_REPOSITORY,
+    DOCUMENT_REPOSITORY,
+    CONTACT_MESSAGE_REPOSITORY,
+    PERSONAL_ACCESS_TOKEN_REPOSITORY,
+    SOURCE_FILE_REPOSITORY,
+  ],
 })
 export class PersistenceModule {}

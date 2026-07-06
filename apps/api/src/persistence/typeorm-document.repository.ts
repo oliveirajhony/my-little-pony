@@ -1,4 +1,6 @@
 import {
+  clonePageConfig,
+  DEFAULT_PAGE_CONFIG,
   Document,
   type DocumentPage,
   type DocumentQuery,
@@ -76,6 +78,8 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
       categories: row.categories,
       indexStatus: row.indexStatus as ReturnType<Document['toProps']>['indexStatus'],
       version: row.version,
+      // Legacy rows (pre-migration) have no page config: fall back to defaults.
+      pageConfig: row.pageConfig ?? clonePageConfig(DEFAULT_PAGE_CONFIG),
       publishedAt: row.publishedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -95,6 +99,7 @@ export class TypeOrmDocumentRepository implements DocumentRepository {
     row.categories = props.categories;
     row.indexStatus = props.indexStatus;
     row.version = props.version;
+    row.pageConfig = props.pageConfig;
     row.storageKey = null;
     row.publishedAt = props.publishedAt;
     row.createdAt = props.createdAt;
