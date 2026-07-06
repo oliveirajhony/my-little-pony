@@ -47,7 +47,7 @@ import { MinioSourceFileStorage } from './minio-source-file.storage';
           useSSL: false,
           accessKey: config.minioAccessKey,
           secretKey: config.minioSecretKey,
-          bucket: config.minioBucket,
+          bucket: config.minioSourceFileBucket,
         }),
     },
   ],
