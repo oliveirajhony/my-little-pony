@@ -68,7 +68,7 @@ export class UpdatePersonalAccessToken {
     scopes?: PatScope[];
   }): Promise<PersonalAccessToken> {
     const token = await this.repo.findById(input.id);
-    if (!token) throw new DomainError('document-not-found');
+    if (!token) throw new DomainError('token-not-found');
     if (!token.isOwnedBy(input.ownerId)) throw new DomainError('forbidden');
     if (input.name !== undefined) token.rename(input.name);
     if (input.scopes !== undefined) token.setScopes(input.scopes);
@@ -85,7 +85,7 @@ export class RevokePersonalAccessToken {
 
   async execute(input: { ownerId: string; id: string }): Promise<void> {
     const token = await this.repo.findById(input.id);
-    if (!token) throw new DomainError('document-not-found');
+    if (!token) throw new DomainError('token-not-found');
     if (!token.isOwnedBy(input.ownerId)) throw new DomainError('forbidden');
     token.revoke(this.clock.now());
     await this.repo.save(token);

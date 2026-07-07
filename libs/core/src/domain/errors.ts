@@ -17,6 +17,7 @@ export type DomainErrorCode =
   | 'invalid-page-config'
   | 'invalid-token-scope'
   | 'invalid-token'
+  | 'token-not-found'
   | 'insufficient-scope'
   | 'invalid-file'
   | 'file-not-found';

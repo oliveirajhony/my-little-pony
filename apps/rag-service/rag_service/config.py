@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -90,6 +91,23 @@ class Settings(BaseSettings):
     answer_top_k: int = 5
     # Teto do contexto (chars) para não estourar a janela do modelo.
     answer_max_context_chars: int = 8000
+
+    @model_validator(mode="after")
+    def _check_backends(self) -> Settings:
+        # Fail-fast no boot em vez de erro obscuro no primeiro /answer: um typo
+        # em llm_backend cairia silenciosamente no default, e "openai" sem base
+        # montaria a URL "/chat/completions" e falharia em runtime.
+        if self.llm_backend not in ("ollama", "openai"):
+            raise ValueError(
+                f"llm_backend inválido: {self.llm_backend!r} (use 'ollama' ou 'openai')"
+            )
+        if self.dense_backend not in ("local", "http"):
+            raise ValueError(
+                f"dense_backend inválido: {self.dense_backend!r} (use 'local' ou 'http')"
+            )
+        if self.llm_backend == "openai" and not self.llm_api_base:
+            raise ValueError("llm_backend='openai' exige RAG_LLM_API_BASE")
+        return self
 
 
 @lru_cache

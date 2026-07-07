@@ -50,6 +50,30 @@ function titleFrom(text: string): string {
   return clean.length > 48 ? `${clean.slice(0, 48)}…` : clean || 'Nova conversa';
 }
 
+const STUCK_ANSWER = 'Não consegui responder agora. Tente novamente em instantes.';
+
+/**
+ * Remove mensagens em voo antes de persistir: um reload no meio de uma resposta
+ * deixaria a bolha "pending" travada para sempre (e congelaria o parcial quando
+ * o streaming da Fase C chegar).
+ */
+export function withoutPendingMessages(chats: Chat[]): Chat[] {
+  return chats.map((c) => ({ ...c, messages: c.messages.filter((m) => !m.pending) }));
+}
+
+/**
+ * Rede de segurança para estado persistido por versões anteriores (que ainda
+ * pode conter `pending: true`): converte a bolha travada num erro claro.
+ */
+export function repairPendingMessages(chats: Chat[]): Chat[] {
+  return chats.map((c) => ({
+    ...c,
+    messages: c.messages.map((m) =>
+      m.pending ? { ...m, pending: false, content: m.content || STUCK_ANSWER } : m,
+    ),
+  }));
+}
+
 type ExploreState = {
   chats: Chat[];
   activeId: string | null;
@@ -156,7 +180,13 @@ export const useExploreStore = create<ExploreState>()(
     }),
     {
       name: 'mlp-explore',
-      partialize: (state) => ({ chats: state.chats, activeId: state.activeId }),
+      partialize: (state) => ({
+        chats: withoutPendingMessages(state.chats),
+        activeId: state.activeId,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) state.chats = repairPendingMessages(state.chats);
+      },
     },
   ),
 );
