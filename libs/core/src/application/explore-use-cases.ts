@@ -1,10 +1,6 @@
-import type {
-  AnswerGateway,
-  DocumentRepository,
-  SearchHit,
-  SourceFileRepository,
-} from './ports.js';
+import type { AnswerGateway, DocumentRepository, SourceFileRepository } from './ports.js';
 import type { SearchResultItem } from './search-use-cases.js';
+import { enrichSources } from './source-enricher.js';
 
 /** Resposta do Explorar: prosa gerada por IA + fontes já enriquecidas. */
 export type ExploreAnswer = {
@@ -30,26 +26,10 @@ export class AnswerQuestion {
     if (!query) return { answer: '', grounded: false, sources: [] };
 
     const result = await this.gateway.answer({ ownerId: input.ownerId, q: query });
-    const sources: SearchResultItem[] = [];
-    for (const hit of result.sources) {
-      const enriched = await this.enrich(hit, input.ownerId);
-      if (enriched) sources.push(enriched);
-    }
+    const sources = await enrichSources(result.sources, input.ownerId, {
+      documents: this.documents,
+      files: this.files,
+    });
     return { answer: result.answer, grounded: result.grounded, sources };
   }
-
-  private async enrich(hit: SearchHit, ownerId: string): Promise<SearchResultItem | null> {
-    if (hit.kind === 'file') {
-      const file = await this.files.findById(hit.documentId);
-      if (!file?.isOwnedBy(ownerId)) return null;
-      return { ...base(hit, 'file'), title: file.filename, slug: null };
-    }
-    const doc = await this.documents.findById(hit.documentId);
-    if (!doc?.isOwnedBy(ownerId)) return null;
-    return { ...base(hit, 'native'), title: doc.title, slug: doc.slug };
-  }
-}
-
-function base(hit: SearchHit, kind: 'native' | 'file'): Omit<SearchResultItem, 'title' | 'slug'> {
-  return { documentId: hit.documentId, score: hit.score, snippet: hit.snippet, kind };
 }
