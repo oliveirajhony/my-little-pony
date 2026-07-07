@@ -14,9 +14,8 @@ from rag_service.application.ports import (
     VectorIndex,
 )
 from rag_service.application.retrieval import retrieve_and_rerank
+from rag_service.application.snippet import snippet as _snippet
 from rag_service.domain.models import SearchHit, SearchQuery
-
-SNIPPET_MAX = 280
 
 
 class SearchDocuments:
@@ -44,10 +43,3 @@ class SearchDocuments:
             )
             for hit in ranked[: query.top_k]
         ]
-
-
-def _snippet(text: str) -> str:
-    clean = " ".join((text or "").split())
-    if len(clean) <= SNIPPET_MAX:
-        return clean
-    return clean[:SNIPPET_MAX].rstrip() + "…"

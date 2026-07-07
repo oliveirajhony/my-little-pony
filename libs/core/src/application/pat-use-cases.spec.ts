@@ -212,6 +212,14 @@ describe('UpdatePersonalAccessToken', () => {
       DomainError,
     );
   });
+
+  it('throws token-not-found (not document-not-found) for an unknown token id', async () => {
+    const repo = new FakePatRepo();
+    const update = new UpdatePersonalAccessToken(repo);
+    await expect(update.execute({ ownerId: 'u1', id: 'nope', name: 'x' })).rejects.toMatchObject({
+      code: 'token-not-found',
+    });
+  });
 });
 
 describe('PurgeExpiredTokens', () => {

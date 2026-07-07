@@ -161,3 +161,24 @@ class IndexResult:
         return IndexResult(
             document_id=document_id, status="failed", chunk_count=0, error=error, kind=kind
         )
+
+
+# --------------------------------------------------------------------------- #
+# Eventos de streaming do RAG generativo (/answer/stream)
+# --------------------------------------------------------------------------- #
+@dataclass(frozen=True)
+class AnswerSourcesEvent:
+    """Primeiro evento do stream: as fontes já selecionadas (antes dos tokens)."""
+
+    sources: list[AnswerSource]
+    grounded: bool
+
+
+@dataclass(frozen=True)
+class AnswerTokenEvent:
+    """Um pedaço de texto da resposta, emitido incrementalmente."""
+
+    text: str
+
+
+AnswerEvent = AnswerSourcesEvent | AnswerTokenEvent

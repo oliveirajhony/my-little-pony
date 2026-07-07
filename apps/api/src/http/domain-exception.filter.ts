@@ -51,6 +51,7 @@ const MAP: Record<DomainErrorCode, { status: number; message: string }> = {
     status: HttpStatus.UNAUTHORIZED,
     message: 'Token de acesso inválido ou expirado.',
   },
+  'token-not-found': { status: HttpStatus.NOT_FOUND, message: 'Token de acesso não encontrado.' },
   'insufficient-scope': {
     status: HttpStatus.FORBIDDEN,
     message: 'Este token não tem permissão para esta ação.',
