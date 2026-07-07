@@ -18,7 +18,11 @@ import { SearchController } from './search.controller';
       provide: SEARCH_GATEWAY,
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) =>
-        new HttpSearchGateway(config.searchServiceUrl, config.searchServiceToken),
+        new HttpSearchGateway(
+          config.searchServiceUrl,
+          config.searchServiceToken,
+          config.searchServiceTimeoutMs,
+        ),
     },
     {
       provide: SearchDocuments,

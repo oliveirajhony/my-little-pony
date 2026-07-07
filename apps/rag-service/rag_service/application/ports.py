@@ -6,7 +6,8 @@ assinatura (duck typing estrutural). Isso mantém o domínio livre de infra.
 
 from __future__ import annotations
 
-from typing import Iterator, Protocol
+from collections.abc import Iterator
+from typing import Protocol
 
 from rag_service.domain.models import (
     Chunk,

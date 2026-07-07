@@ -30,6 +30,10 @@ class SingleFlightGuard:
             position = self._waiting
             try:
                 await asyncio.wait_for(self._sem.acquire(), timeout=self._max_wait_s)
+            except TimeoutError as exc:
+                # Esperou o teto e não conseguiu o slot: é backpressure, não um
+                # crash. Trata como fila cheia para o endpoint responder limpo.
+                raise QueueFullError() from exc
             finally:
                 self._waiting -= 1
         else:

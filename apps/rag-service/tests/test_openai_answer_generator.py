@@ -75,3 +75,23 @@ def test_stream_parses_sse_deltas():
 
     assert tokens == ["Res", "posta"]
     assert seen["body"]["stream"] is True
+
+
+# Frame de usage (choices vazio) + keepalive: provedores OpenAI-compat mandam
+# isso; um choices[0] ingênuo estouraria IndexError e mataria o stream no meio.
+SSE_WITH_EMPTY_CHOICES = (
+    b'data: {"choices":[{"delta":{"content":"Oi"}}]}\n\n'
+    b'data: {"choices":[]}\n\n'
+    b'data: {"choices":[{"delta":{"content":" mundo"}}]}\n\n'
+    b'data: {"choices":[],"usage":{"total_tokens":9}}\n\n'
+    b"data: [DONE]\n\n"
+)
+
+
+def test_stream_skips_frames_without_choices():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=SSE_WITH_EMPTY_CHOICES)
+
+    tokens = list(build(handler, api_key="sk").generate_stream("q", "[1] ctx"))
+
+    assert tokens == ["Oi", " mundo"]

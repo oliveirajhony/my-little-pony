@@ -60,4 +60,29 @@ describe('auth-store', () => {
     expect(ok).toBe(false);
     expect(useAuth.getState().status).toBe('guest');
   });
+
+  it('refresh concorrente dispara uma única chamada (single-flight)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ accessToken: 'novo' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Duas requisições que levaram 401 ao mesmo tempo chamam refresh em paralelo.
+    const [a, b] = await Promise.all([useAuth.getState().refresh(), useAuth.getState().refresh()]);
+
+    expect(a).toBe(true);
+    expect(b).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // não N chamadas a /auth/refresh
+    expect(useAuth.getState().accessToken).toBe('novo');
+  });
+
+  it('refresh em voo é recriado após concluir', async () => {
+    mockFetch({ ok: true, status: 200, body: { accessToken: 't1' } });
+    await useAuth.getState().refresh();
+    mockFetch({ ok: true, status: 200, body: { accessToken: 't2' } });
+    await useAuth.getState().refresh();
+    expect(useAuth.getState().accessToken).toBe('t2');
+  });
 });

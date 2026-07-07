@@ -41,3 +41,28 @@ def test_rejects_when_queue_full():
         return raised
 
     assert asyncio.run(scenario()) is True
+
+
+def test_wait_timeout_is_reported_as_queue_full():
+    # Esperar o teto sem conseguir o slot é backpressure, não crash: deve virar
+    # QueueFullError (não um TimeoutError cru que o endpoint trataria como erro
+    # interno).
+    async def scenario():
+        guard = SingleFlightGuard(limit=1, max_depth=8, max_wait_s=0.02)
+
+        async def hold():
+            async with guard.slot():
+                await asyncio.sleep(0.2)
+
+        holder = asyncio.create_task(hold())
+        await asyncio.sleep(0.01)
+        raised = False
+        try:
+            async with guard.slot():
+                pass
+        except QueueFullError:
+            raised = True
+        await holder
+        return raised
+
+    assert asyncio.run(scenario()) is True
