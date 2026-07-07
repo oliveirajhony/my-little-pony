@@ -1,4 +1,6 @@
 set -e
 
 pnpm exec biome check --staged --no-errors-on-unmatched
-pnpm exec nx affected -t test
+# Testes unitários dos projetos afetados: TS (vitest) + Python (rag-service via
+# container/.venv, com skip gracioso — ver apps/rag-service/scripts/run-tests.sh).
+pnpm exec nx affected -t vitest:test test
