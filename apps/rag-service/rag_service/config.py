@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,16 +63,51 @@ class Settings(BaseSettings):
     dense_backend: str = "local"
     dense_service_url: str = "http://localhost:8080"
 
-    # RAG generativo (/answer): LLM local via Ollama (como o v2).
-    ollama_url: str = "http://localhost:11434/api/chat"
+    # RAG generativo (/answer): backend do LLM plugável.
+    #   "ollama": LLM local via Ollama (default — zero-config, sem API key, portável).
+    #   "openai": qualquer endpoint compatível com a API OpenAI /chat/completions
+    #             (OpenAI, Groq, OpenRouter, Together, vLLM, LM Studio...).
+    llm_backend: str = "ollama"
     llm_model: str = "qwen2.5:7b-instruct"
+
+    # Backend "ollama".
+    ollama_url: str = "http://localhost:11434/api/chat"
     ollama_timeout: float = 300.0
+
+    # Backend "openai" (API hospedada ou compatível). Só usados quando
+    # llm_backend="openai"; a base e a chave dependem do provedor.
+    llm_api_base: str = ""  # ex.: https://api.openai.com/v1
+    llm_api_key: str = ""
+    llm_api_timeout: float = 60.0
+
+    # Streaming (/answer/stream): protege o LLM único (1 geração por vez em CPU).
+    llm_max_concurrency: int = 1
+    stream_queue_max_depth: int = 8      # fila cheia → recusa (error) em vez de enfileirar sem fim
+    stream_queue_max_wait_s: float = 30.0  # espera máxima na fila antes de desistir
+    stream_idle_timeout_s: float = 60.0    # sem token por esse tempo → encerra
     # Só entram no contexto trechos com score de rerank >= limiar (anti-alucinação).
     answer_min_score: float = 0.05
     # Quantos trechos, no máximo, viram contexto do LLM.
     answer_top_k: int = 5
     # Teto do contexto (chars) para não estourar a janela do modelo.
     answer_max_context_chars: int = 8000
+
+    @model_validator(mode="after")
+    def _check_backends(self) -> Settings:
+        # Fail-fast no boot em vez de erro obscuro no primeiro /answer: um typo
+        # em llm_backend cairia silenciosamente no default, e "openai" sem base
+        # montaria a URL "/chat/completions" e falharia em runtime.
+        if self.llm_backend not in ("ollama", "openai"):
+            raise ValueError(
+                f"llm_backend inválido: {self.llm_backend!r} (use 'ollama' ou 'openai')"
+            )
+        if self.dense_backend not in ("local", "http"):
+            raise ValueError(
+                f"dense_backend inválido: {self.dense_backend!r} (use 'local' ou 'http')"
+            )
+        if self.llm_backend == "openai" and not self.llm_api_base:
+            raise ValueError("llm_backend='openai' exige RAG_LLM_API_BASE")
+        return self
 
 
 @lru_cache

@@ -31,6 +31,9 @@ export const EnvSchema = z.object({
   SEARCH_SERVICE_URL: z.string().default(''),
   // Service token the search proxy sends to the Python /search (= RAG_SERVICE_API_TOKEN).
   SEARCH_SERVICE_TOKEN: z.string().default(''),
+  // Timeout (ms) for calls to the Python search/RAG service. undici's fetch has
+  // no default request timeout, so without this a hung service pins the request.
+  SEARCH_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   // SMTP para envio de e-mail (dev: Mailpit em localhost:1025, sem auth).
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().default(1025),
@@ -60,6 +63,7 @@ export type AppConfig = {
   minioSourceFileBucket: string;
   searchServiceUrl: string;
   searchServiceToken: string;
+  searchServiceTimeoutMs: number;
   smtpHost: string;
   smtpPort: number;
   smtpSecure: boolean;
@@ -98,6 +102,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     minioSourceFileBucket: env_.MINIO_SOURCE_FILE_BUCKET,
     searchServiceUrl: env_.SEARCH_SERVICE_URL,
     searchServiceToken: env_.SEARCH_SERVICE_TOKEN,
+    searchServiceTimeoutMs: env_.SEARCH_SERVICE_TIMEOUT_MS,
     smtpHost: env_.SMTP_HOST,
     smtpPort: env_.SMTP_PORT,
     smtpSecure: env_.SMTP_SECURE,

@@ -9,15 +9,29 @@ Os casos de uso são injetados via Depends para permitir override nos testes.
 
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Response
+import asyncio
+import logging
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, Field
+from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
+from starlette.responses import StreamingResponse
 
+from rag_service.adapters.inbound.sse import sse_line
+from rag_service.adapters.inbound.stream_guard import QueueFullError, SingleFlightGuard
 from rag_service.application.use_cases import AnswerQuestion, SearchDocuments
 from rag_service.composition import Composition
 from rag_service.config import get_settings
-from rag_service.domain.models import SearchQuery
-from rag_service.observability import SEARCH_LATENCY, SEARCH_REQUESTS
+from rag_service.domain.models import AnswerSourcesEvent, SearchQuery
+from rag_service.observability import (
+    ANSWER_STREAM_ERRORS,
+    ANSWER_STREAM_REQUESTS,
+    SEARCH_LATENCY,
+    SEARCH_REQUESTS,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class SearchRequest(BaseModel):
@@ -55,8 +69,17 @@ class AnswerResponse(BaseModel):
     sources: list[AnswerSourceResponse]
 
 
-# Composition root do processo da API (adapters preguiçosos).
-_composition = Composition(get_settings())
+# Composition root do processo da API (adapters preguiçosos). get_settings() é
+# cacheado (lru_cache), então _settings é o mesmo objeto usado na composição.
+_settings = get_settings()
+_composition = Composition(_settings)
+
+_guard = SingleFlightGuard(
+    limit=_settings.llm_max_concurrency,
+    max_depth=_settings.stream_queue_max_depth,
+    max_wait_s=_settings.stream_queue_max_wait_s,
+)
+_SAFE_STREAM_ERROR = "Não consegui responder agora. Tente novamente em instantes."
 
 
 def get_search_use_case() -> SearchDocuments:
@@ -127,13 +150,19 @@ def search(
     response_model=AnswerResponse,
     dependencies=[Depends(require_service_token)],
 )
-def answer(
+async def answer(
     request: AnswerRequest,
     use_case: AnswerQuestion = Depends(get_answer_use_case),
 ) -> AnswerResponse:
-    result = use_case.execute(
-        SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
-    )
+    query = SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
+    # Serializa pelo mesmo guard do streaming: sem isto, /answer roda no
+    # threadpool e bate no LLM único em paralelo, driblando o limite de
+    # concorrência que o /answer/stream respeita.
+    try:
+        async with _guard.slot():
+            result = await run_in_threadpool(use_case.execute, query)
+    except QueueFullError as exc:
+        raise HTTPException(status_code=503, detail="busy") from exc
     return AnswerResponse(
         answer=result.answer,
         grounded=result.grounded,
@@ -147,4 +176,71 @@ def answer(
             )
             for source in result.sources
         ],
+    )
+
+
+@app.post("/answer/stream", dependencies=[Depends(require_service_token)])
+async def answer_stream(
+    request: AnswerRequest,
+    http_request: Request,
+    use_case: AnswerQuestion = Depends(get_answer_use_case),
+) -> StreamingResponse:
+    query = SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
+    idle_timeout = _settings.stream_idle_timeout_s
+
+    async def events():
+        ANSWER_STREAM_REQUESTS.inc()
+        try:
+            async with _guard.slot() as position:
+                if position > 0:
+                    yield sse_line({"type": "status", "stage": "queued", "position": position})
+                yield sse_line({"type": "status", "stage": "retrieving"})
+                grounded = True
+                # Itera manualmente para (a) impor um idle timeout por evento — um
+                # LLM travado não pode prender o slot indefinidamente — e (b)
+                # garantir o fechamento do gerador (e do stream httpx) no finally.
+                stream = iterate_in_threadpool(use_case.stream(query))
+                try:
+                    while True:
+                        if await http_request.is_disconnected():
+                            return  # solta o semáforo ao sair do `async with`
+                        try:
+                            ev = await asyncio.wait_for(stream.__anext__(), timeout=idle_timeout)
+                        except StopAsyncIteration:
+                            break
+                        except TimeoutError:
+                            logger.warning("answer stream idle timeout after %ss", idle_timeout)
+                            ANSWER_STREAM_ERRORS.labels(reason="idle_timeout").inc()
+                            yield sse_line({"type": "error", "message": _SAFE_STREAM_ERROR})
+                            return
+                        if isinstance(ev, AnswerSourcesEvent):
+                            grounded = ev.grounded
+                            yield sse_line({
+                                "type": "sources", "grounded": ev.grounded,
+                                "sources": [
+                                    {"documentId": s.document_id, "chunkId": s.chunk_id,
+                                     "score": s.score, "snippet": s.snippet, "kind": s.kind}
+                                    for s in ev.sources
+                                ],
+                            })
+                            yield sse_line({"type": "status", "stage": "generating"})
+                        else:
+                            yield sse_line({"type": "token", "text": ev.text})
+                    yield sse_line({"type": "done", "grounded": grounded})
+                finally:
+                    await stream.aclose()
+        except QueueFullError:
+            ANSWER_STREAM_ERRORS.labels(reason="queue_full").inc()
+            yield sse_line({"type": "error", "message": _SAFE_STREAM_ERROR})
+        except Exception:
+            # Nunca vaza detalhe interno pro cliente, mas registra o traceback:
+            # sem isto, um bug real fica indistinguível de backpressure normal.
+            logger.exception("answer stream failed")
+            ANSWER_STREAM_ERRORS.labels(reason="internal").inc()
+            yield sse_line({"type": "error", "message": _SAFE_STREAM_ERROR})
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

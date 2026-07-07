@@ -18,7 +18,11 @@ import { HttpAnswerGateway } from './http-answer.gateway';
       provide: ANSWER_GATEWAY,
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) =>
-        new HttpAnswerGateway(config.searchServiceUrl, config.searchServiceToken),
+        new HttpAnswerGateway(
+          config.searchServiceUrl,
+          config.searchServiceToken,
+          config.searchServiceTimeoutMs,
+        ),
     },
     {
       provide: AnswerQuestion,

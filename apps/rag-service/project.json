@@ -16,7 +16,7 @@
       "executor": "nx:run-commands",
       "options": {
         "cwd": "apps/rag-service",
-        "command": ".venv/bin/pytest -m \"not integration\""
+        "command": "sh scripts/run-tests.sh"
       }
     },
     "test-integration": {
