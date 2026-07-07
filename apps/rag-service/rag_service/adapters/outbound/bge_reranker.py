@@ -30,6 +30,7 @@ class BgeReranker:
                 score=float(score),
                 text=hit.text,
                 kind=hit.kind,
+                headings=hit.headings,
             )
             for score, hit in ranked
         ]

@@ -217,6 +217,7 @@ class QdrantServerIndex:
                 score=point.score,
                 text=(point.payload or {}).get("text", ""),
                 kind=(point.payload or {}).get("kind", "native"),
+                headings=list((point.payload or {}).get("headings") or []),
             )
             for point in response.points
         ]
