@@ -59,23 +59,30 @@ export class PythonServiceClient {
   async postStream(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (this.serviceToken) headers.authorization = `Bearer ${this.serviceToken}`;
+
+    // Timeout SÓ do connect/handshake (até os headers chegarem): não pode cortar
+    // um stream longo mas vivo. Depois que a Response volta, limpamos o timer — o
+    // corpo passa a ser guardado pelo idle-timeout do parseSse e pelo signal do
+    // chamador (abort no disconnect).
+    const connect = new AbortController();
+    const timer = setTimeout(() => connect.abort(), this.timeoutMs);
+    const fetchSignal = signal ? AbortSignal.any([signal, connect.signal]) : connect.signal;
+
     let response: Response;
     try {
       response = await fetch(`${this.serviceUrl}${path}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        // Se o chamador passa um signal (abort no disconnect), respeita-o; senão
-        // usa o timeout padrão. Não misturamos os dois para não cortar um stream
-        // longo e legítimo no meio.
-        signal: signal ?? AbortSignal.timeout(this.timeoutMs),
+        signal: fetchSignal,
       });
     } catch (error) {
-      const reason =
-        error instanceof Error && error.name === 'TimeoutError' ? 'timed out' : 'unreachable';
+      clearTimeout(timer);
+      const reason = connect.signal.aborted ? 'timed out' : 'unreachable';
       this.logger.error(`python service ${reason} (POST ${path}): ${String(error)}`);
       throw error;
     }
+    clearTimeout(timer);
     if (!response.ok) {
       this.logger.error(
         `python service returned ${response.status} ${response.statusText} (POST ${path})`,
@@ -88,18 +95,50 @@ export class PythonServiceClient {
 
 /**
  * Parseia um corpo SSE (`text/event-stream`) em objetos JSON, um por frame
- * `data: {...}\n\n`. Tolerante a frames partidos entre chunks e a UTF-8
- * multibyte (`TextDecoder({stream:true})`). Ignora linhas não-`data:` (comentários
- * de heartbeat `:` etc.).
+ * `data: {...}\n\n`. Tolerante a: frames partidos entre chunks; UTF-8 multibyte
+ * (`TextDecoder({stream:true})`); linhas não-`data:` (heartbeat `:` etc.); e
+ * frames MALFORMADOS (um `data:` com JSON inválido é pulado, não derruba o
+ * stream). `idleMs` > 0 encerra se ficar sem NENHUM byte por esse tempo (upstream
+ * travado não pode prender a conexão pra sempre).
  */
-export async function* parseSse<T>(response: Response): AsyncIterable<T> {
+export async function* parseSse<T>(response: Response, idleMs = 0): AsyncIterable<T> {
   if (!response.body) return;
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+
+  const emitFrame = function* (frame: string): Iterable<T> {
+    for (const line of frame.split(/\r?\n/)) {
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (!data) continue;
+      try {
+        yield JSON.parse(data) as T;
+      } catch {
+        // Frame malformado (JSON truncado/quebrado): pula em vez de matar o
+        // stream inteiro — os tokens seguintes ainda chegam.
+      }
+    }
+  };
+
+  const readNext = async (): Promise<Awaited<ReturnType<typeof reader.read>>> => {
+    if (!idleMs) return reader.read();
+    let t: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        reader.read(),
+        new Promise<never>((_, reject) => {
+          t = setTimeout(() => reject(new Error('sse idle timeout')), idleMs);
+        }),
+      ]);
+    } finally {
+      clearTimeout(t);
+    }
+  };
+
   try {
     for (;;) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readNext();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       // Frames separados por linha em branco (\r\n\r\n ou \n\n).
@@ -108,14 +147,15 @@ export async function* parseSse<T>(response: Response): AsyncIterable<T> {
         if (boundary?.index === undefined) break;
         const frame = buffer.slice(0, boundary.index);
         buffer = buffer.slice(boundary.index + boundary[0].length);
-        for (const line of frame.split(/\r?\n/)) {
-          if (!line.startsWith('data:')) continue;
-          const data = line.slice(5).trim();
-          if (data) yield JSON.parse(data) as T;
-        }
+        yield* emitFrame(frame);
       }
     }
+    // Flush final: bytes multibyte pendentes + um último frame sem a linha em
+    // branco terminadora (senão o `done` final poderia se perder).
+    buffer += decoder.decode();
+    if (buffer.trim()) yield* emitFrame(buffer);
   } finally {
-    reader.releaseLock();
+    // cancel() (não só releaseLock) garante o teardown do corpo em break/abort.
+    await reader.cancel().catch(() => {});
   }
 }

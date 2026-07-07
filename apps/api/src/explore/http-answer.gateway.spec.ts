@@ -138,5 +138,51 @@ describe('HttpAnswerGateway', () => {
 
       expect(events).toEqual([{ type: 'error', message: expect.any(String) }]);
     });
+
+    it('skips a malformed frame mid-stream instead of killing the whole stream', async () => {
+      const withGarbage =
+        'data: {"type":"token","text":"oi"}\n\n' +
+        'data: {"type":"token", BROKEN JSON\n\n' + // frame malformado
+        'data: {"type":"token","text":" mundo"}\n\n' +
+        'data: {"type":"done","grounded":true}\n\n';
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(withGarbage, { status: 200 }));
+      const gateway = new HttpAnswerGateway('http://rag', 'tok');
+
+      const events = await collect(gateway.answerStream({ ownerId: 'u1', q: 'oi' }));
+
+      // os tokens antes E depois do frame ruim chegam; o ruim é pulado.
+      expect(events.map((e) => e.type)).toEqual(['token', 'token', 'done']);
+      expect(
+        events
+          .filter((e) => e.type === 'token')
+          .map((e) => (e as { text: string }).text)
+          .join(''),
+      ).toBe('oi mundo');
+    });
+
+    it('delivers a final frame that lacks the trailing blank line', async () => {
+      const noTrailer =
+        'data: {"type":"token","text":"fim"}\n\ndata: {"type":"done","grounded":false}'; // sem \n\n final
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(noTrailer, { status: 200 }));
+      const gateway = new HttpAnswerGateway('http://rag', 'tok');
+
+      const events = await collect(gateway.answerStream({ ownerId: 'u1', q: 'oi' }));
+
+      expect(events.map((e) => e.type)).toEqual(['token', 'done']); // o done final não se perde
+    });
+
+    it('remaps the Python error frame to a safe message and passes status.position', async () => {
+      const sse =
+        'data: {"type":"status","stage":"queued","position":2}\n\n' +
+        'data: {"type":"error","message":"detalhe interno do servidor"}\n\n';
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(sse, { status: 200 }));
+      const gateway = new HttpAnswerGateway('http://rag', 'tok');
+
+      const events = await collect(gateway.answerStream({ ownerId: 'u1', q: 'oi' }));
+
+      expect(events[0]).toEqual({ type: 'status', stage: 'queued', position: 2 });
+      const err = events.find((e) => e.type === 'error') as { message: string };
+      expect(err.message).not.toContain('interno'); // mensagem fixa, sem vazar detalhe
+    });
   });
 });

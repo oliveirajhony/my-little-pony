@@ -10,6 +10,11 @@ const NOT_CONFIGURED: GatewayAnswer = {
 // Mensagem fixa e segura para o cliente — nunca vaza detalhe interno.
 const SAFE_STREAM_ERROR = 'Não consegui responder agora. Tente novamente em instantes.';
 
+// Sem NENHUM byte do Python por esse tempo → encerra o stream (upstream travado
+// não pode prender a conexão indefinidamente). Folgado o bastante para o LLM em
+// CPU entre tokens.
+const STREAM_IDLE_MS = 60_000;
+
 type AnswerBody = {
   answer: string;
   grounded: boolean;
@@ -88,7 +93,7 @@ export class HttpAnswerGateway implements AnswerGateway {
     }
 
     try {
-      for await (const raw of parseSse<RawFrame>(response)) {
+      for await (const raw of parseSse<RawFrame>(response, STREAM_IDLE_MS)) {
         switch (raw.type) {
           case 'sources':
             yield {
