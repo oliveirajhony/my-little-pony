@@ -111,9 +111,30 @@ export interface SearchGateway {
 /** A generative answer grounded in retrieved sources (Python /answer). */
 export type GatewayAnswer = { answer: string; grounded: boolean; sources: SearchHit[] };
 
+/**
+ * Evento do streaming do RAG, como o gateway o entrega (fontes ainda cruas —
+ * `SearchHit[]` — para o core enriquecer/filtrar por dono). Espelha o protocolo
+ * SSE do serviço Python (`POST /answer/stream`): campo `type` discrimina.
+ */
+export type AnswerStreamEvent =
+  | { type: 'status'; stage: 'queued' | 'retrieving' | 'generating'; position?: number }
+  | { type: 'sources'; grounded: boolean; sources: SearchHit[] }
+  | { type: 'token'; text: string }
+  | { type: 'done'; grounded: boolean }
+  | { type: 'error'; message: string };
+
 /** Outbound port to the RAG answer service. The HTTP adapter proxies to Python. */
 export interface AnswerGateway {
   answer(input: { ownerId: string; q: string }): Promise<GatewayAnswer>;
+  /**
+   * Streaming do RAG (SSE). `signal` permite cancelar a geração upstream quando
+   * o cliente desconecta (essencial com LLM em CPU).
+   */
+  answerStream(input: {
+    ownerId: string;
+    q: string;
+    signal?: AbortSignal;
+  }): AsyncIterable<AnswerStreamEvent>;
 }
 
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */
