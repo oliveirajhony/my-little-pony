@@ -3,6 +3,7 @@ import { AnswerQuestion, type ExploreAnswer } from '@my-little-pony/core';
 import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { IsString } from 'class-validator';
 import type { Response } from 'express';
 import { AccessTokenGuard, type AuthUser, CurrentUser } from '../auth/access-token.guard';
 
@@ -13,6 +14,9 @@ const HEARTBEAT_MS = 15_000;
 
 export class ExploreRequest {
   @ApiProperty({ description: 'Pergunta em linguagem natural' })
+  // Sem um decorator do class-validator, o ValidationPipe global (whitelist:true)
+  // REMOVE este campo do body — a pergunta chegaria vazia ao use case.
+  @IsString()
   q!: string;
 }
 

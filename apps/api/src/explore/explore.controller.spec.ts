@@ -1,6 +1,30 @@
 import type { AnswerQuestion, ExploreStreamEvent } from '@my-little-pony/core';
+import { ValidationPipe } from '@nestjs/common';
 import type { Response } from 'express';
-import { ExploreController } from './explore.controller';
+import { ExploreController, ExploreRequest } from './explore.controller';
+
+// Regressão: o ValidationPipe global usa whitelist:true, que REMOVE qualquer
+// campo do body sem decorator do class-validator. Sem @IsString() no `q`, a
+// pergunta era descartada e chegava vazia ao use case — o chat nunca respondia.
+// Este teste falha se o decorator sumir de novo.
+describe('ExploreRequest under the global ValidationPipe (whitelist)', () => {
+  const pipe = new ValidationPipe({ whitelist: true, transform: true });
+
+  it('keeps `q` in the body (would be stripped without a class-validator decorator)', async () => {
+    const out = await pipe.transform(
+      { q: 'quais os tipos de análise?' },
+      { type: 'body', metatype: ExploreRequest },
+    );
+    expect(out).toBeInstanceOf(ExploreRequest);
+    expect(out.q).toBe('quais os tipos de análise?');
+  });
+
+  it('rejects a non-string q', async () => {
+    await expect(
+      pipe.transform({ q: 123 }, { type: 'body', metatype: ExploreRequest }),
+    ).rejects.toBeDefined();
+  });
+});
 
 /** Response fake do Express: captura headers, frames escritos e o handler de close. */
 function fakeRes() {
