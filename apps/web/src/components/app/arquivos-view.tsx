@@ -15,6 +15,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -115,6 +116,22 @@ export function ArquivosView() {
 
   const all = files;
   const preview = all.find((f) => f.id === previewId) ?? null;
+
+  // Deep-link `?file=<id>`: abre o preview do arquivo direto (ex.: uma fonte
+  // citada no Explorar). Espera a lista carregar; abre uma vez e limpa o param
+  // pra não reabrir ao fechar. Se o id não existir, só limpa o param.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fileParam = searchParams.get('file');
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (!fileParam || deepLinkHandled.current) return;
+    const exists = all.some((f) => f.id === fileParam);
+    if (!exists && !hydrated) return; // ainda carregando: espera
+    if (exists) setPreviewId(fileParam);
+    deepLinkHandled.current = true;
+    router.replace('/app/arquivos', { scroll: false });
+  }, [fileParam, all, hydrated, router]);
 
   // Contagem por tipo (dos arquivos totais) para os rótulos das abas.
   const kindCounts = useMemo(() => {

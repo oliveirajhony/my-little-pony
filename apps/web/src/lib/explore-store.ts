@@ -16,11 +16,18 @@ import { askExploreStream, type ExploreSource } from './explore-api';
 
 export type ChatRole = 'user' | 'assistant';
 
-/** Trecho de documento citado como fonte de uma resposta. */
+/**
+ * Trecho de documento citado como fonte de uma resposta. Carrega os metadados
+ * necessários para abrir a fonte (`documentId`, `kind`, `slug`) — as citações
+ * inline e os hover cards da UI dependem deles.
+ */
 export type ChatSource = {
   id: string;
+  documentId: string;
+  kind: 'native' | 'file';
   title: string;
   snippet: string;
+  slug: string | null;
 };
 
 /** Etapa visível da geração (antes/durante os tokens). */
@@ -63,13 +70,16 @@ const STUCK_ANSWER = 'Não consegui responder agora. Tente novamente em instante
 // re-renderizar a árvore a cada token (mantém o typing suave sem travar).
 const FLUSH_MS = 60;
 
-function toSources(list: ExploreSource[]): ChatSource[] {
+export function toSources(list: ExploreSource[]): ChatSource[] {
   // Inclui o índice na key: dois chunks do mesmo doc com o mesmo início de snippet
   // (heading/boilerplate comum) colidiriam senão.
   return list.map((s, i) => ({
     id: `${s.documentId}-${i}`,
+    documentId: s.documentId,
+    kind: s.kind,
     title: s.title,
     snippet: s.snippet,
+    slug: s.slug,
   }));
 }
 
