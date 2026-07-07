@@ -82,4 +82,54 @@ describe('explore-store streaming', () => {
     expect(a?.content).not.toContain('interno');
     expect(a?.streaming).toBeFalsy();
   });
+
+  it('shows the fixed error message when the stream throws (network failure)', async () => {
+    h.impl = () => {
+      throw new Error('network down'); // askExploreStream lança ao ser iterado
+    };
+
+    await useExploreStore.getState().sendMessage('x');
+
+    const a = assistantOf();
+    expect(a?.content).toContain('Não consegui responder');
+    expect(a?.streaming).toBeFalsy();
+    expect(useExploreStore.getState().sending).toBe(false);
+  });
+
+  it('deleting the streaming chat aborts it and clears sending', async () => {
+    h.impl = async function* (_q, signal) {
+      yield { type: 'token', text: 'parcial' };
+      await new Promise<void>((resolve) => signal?.addEventListener('abort', () => resolve()));
+    };
+
+    const pending = useExploreStore.getState().sendMessage('x');
+    await new Promise((r) => setTimeout(r, 10));
+    const chatId = useExploreStore.getState().chats[0].id;
+    useExploreStore.getState().deleteChat(chatId);
+    await pending;
+
+    expect(useExploreStore.getState().chats).toHaveLength(0); // stream não trava
+    expect(useExploreStore.getState().sending).toBe(false);
+  });
+
+  it('aborting before any token removes the empty assistant bubble', async () => {
+    h.impl = (_q, signal) => ({
+      // async iterable que não emite nada e só termina quando abortado
+      [Symbol.asyncIterator]: () => ({
+        next: () =>
+          new Promise((resolve) => {
+            signal?.addEventListener('abort', () => resolve({ done: true, value: undefined }));
+          }),
+      }),
+    });
+
+    const pending = useExploreStore.getState().sendMessage('x');
+    await new Promise((r) => setTimeout(r, 10));
+    useExploreStore.getState().stopGeneration();
+    await pending;
+
+    const chat = useExploreStore.getState().chats[0];
+    expect(chat.messages.filter((m) => m.role === 'assistant')).toHaveLength(0);
+    expect(chat.messages.filter((m) => m.role === 'user')).toHaveLength(1);
+  });
 });

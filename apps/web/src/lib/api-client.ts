@@ -134,6 +134,7 @@ export async function apiFetchStream(path: string, options: RequestInit = {}): P
 
   let res = await send();
   if (res.status === 401 && (await refreshSession())) {
+    await res.body?.cancel().catch(() => {}); // libera o corpo não-lido antes do retry
     res = await send();
   }
   if (!res.ok) {

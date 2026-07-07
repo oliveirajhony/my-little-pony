@@ -34,7 +34,17 @@ export async function* parseSseStream<T>(
 
   try {
     for (;;) {
-      const { done, value } = await reader.read();
+      let result: Awaited<ReturnType<typeof reader.read>>;
+      try {
+        result = await reader.read();
+      } catch (err) {
+        // Abort (botão Parar / troca de conversa) encerra LIMPO, não é erro: o
+        // fetch subjacente rejeita o read com AbortError — só relança se não foi
+        // um abort nosso.
+        if (signal?.aborted) break;
+        throw err;
+      }
+      const { done, value } = result;
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       for (;;) {

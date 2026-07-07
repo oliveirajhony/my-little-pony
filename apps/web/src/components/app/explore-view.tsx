@@ -36,6 +36,10 @@ export function ExploreView() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Sair da tela (navegação/unmount) aborta uma geração em andamento — senão o
+  // fetch/stream seguiria vivo escrevendo num componente desmontado.
+  useEffect(() => () => useExploreStore.getState().stopGeneration(), []);
+
   const active = mounted ? (chats.find((c) => c.id === activeId) ?? null) : null;
   const messages = active?.messages ?? [];
   const docCount = documents.filter((d) => d.status === 'published').length;
@@ -341,7 +345,9 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMe
           </div>
         ) : (
           <div
-            aria-live="polite"
+            // Anuncia a resposta UMA vez, ao concluir. Durante o streaming fica
+            // 'off' — senão o leitor de tela relê o texto inteiro a cada flush.
+            aria-live={message.streaming ? 'off' : 'polite'}
             aria-busy={message.streaming}
             className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
           >
