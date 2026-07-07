@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 from uuid import uuid4
 
@@ -69,6 +70,8 @@ class RabbitIndexConsumer:
         heartbeat: int = 600,
         exchange: str = EXCHANGE,
         queue: str = QUEUE_INDEX_REQUESTED,
+        reconnect_base_delay: float = 1.0,
+        reconnect_max_delay: float = 30.0,
     ) -> None:
         self._params = pika.URLParameters(url)
         self._params.heartbeat = heartbeat
@@ -79,6 +82,8 @@ class RabbitIndexConsumer:
         self._retry_ttl_ms = retry_ttl_ms
         self._exchange = exchange
         self._queue = queue
+        self._reconnect_base_delay = reconnect_base_delay
+        self._reconnect_max_delay = reconnect_max_delay
 
     # ------------------------------------------------------------------ #
     # Decisão (testável com fakes, sem RabbitMQ)
@@ -226,18 +231,49 @@ class RabbitIndexConsumer:
             )
         channel.basic_qos(prefetch_count=1)
 
+    def _connect(self):
+        """Abre a conexão bloqueante (seam para testes)."""
+        return pika.BlockingConnection(self._params)
+
+    def _sleep(self, seconds: float) -> None:
+        """Espera entre reconexões (seam para testes)."""
+        time.sleep(seconds)
+
+    def _consume_forever(self) -> None:
+        """Uma sessão de consumo: conecta, declara a topologia e bloqueia. Sobe
+        AMQPConnectionError se a conexão cair (broker reiniciado, rede etc.)."""
+        connection = self._connect()
+        try:
+            channel = connection.channel()
+            self._setup(channel)
+            logger.info("Worker consumindo a fila '%s'...", self._queue)
+            channel.basic_consume(queue=self._queue, on_message_callback=self._handle)
+            if self._deindex is not None:
+                channel.basic_consume(
+                    queue=QUEUE_DEINDEX_REQUESTED, on_message_callback=self._handle_deindex
+                )
+            channel.start_consuming()
+        finally:
+            try:
+                connection.close()
+            except Exception:  # noqa: BLE001 - fechamento best-effort no teardown
+                pass
+
     def start(self) -> None:
-        """Loop bloqueante de consumo (produção)."""
-        connection = pika.BlockingConnection(self._params)
-        channel = connection.channel()
-        self._setup(channel)
-        logger.info("Worker consumindo a fila '%s'...", self._queue)
-        channel.basic_consume(queue=self._queue, on_message_callback=self._handle)
-        if self._deindex is not None:
-            channel.basic_consume(
-                queue=QUEUE_DEINDEX_REQUESTED, on_message_callback=self._handle_deindex
-            )
-        channel.start_consuming()
+        """Loop de consumo com RECONEXÃO automática (produção). Um restart do
+        RabbitMQ (ou queda de rede) não derruba o worker: ele espera com backoff
+        e reconecta — senão uma indexação fica parada até alguém reiniciar o pod."""
+        delay = self._reconnect_base_delay
+        while True:
+            try:
+                self._consume_forever()
+                return  # start_consuming retornou sem erro (encerramento limpo)
+            except pika.exceptions.AMQPConnectionError as error:
+                logger.warning(
+                    "conexão com o RabbitMQ caiu (%s); reconectando em %.0fs", error, delay
+                )
+                self._sleep(delay)
+                delay = min(delay * 2, self._reconnect_max_delay)
 
     def process_pending(self, max_messages: int = 100, timeout: float = 2.0) -> int:
         """Processa as mensagens já enfileiradas e para (testes)."""

@@ -1,4 +1,5 @@
 import type { SourceFileStorage, StoredSourceFile } from '@my-little-pony/core';
+import type { OnModuleInit } from '@nestjs/common';
 import { Client } from 'minio';
 
 /**
@@ -23,7 +24,7 @@ export type MinioSourceFileStorageOptions = {
  * `source-files/{ownerId}/{fileId}` no bucket privado dedicado (SSE por padrão).
  * O contentType é guardado no metadata do objeto e recuperado no `get`.
  */
-export class MinioSourceFileStorage implements SourceFileStorage {
+export class MinioSourceFileStorage implements SourceFileStorage, OnModuleInit {
   private readonly client: Client;
   private readonly bucket: string;
   private ready?: Promise<void>;
@@ -37,6 +38,20 @@ export class MinioSourceFileStorage implements SourceFileStorage {
       secretKey: options.secretKey,
     });
     this.bucket = options.bucket;
+  }
+
+  /**
+   * Provisiona o bucket no boot (não lazy): num ambiente novo, o worker de
+   * indexação pode tentar ler um arquivo antes da 1ª importação criar o bucket,
+   * caindo em NoSuchBucket. Best-effort — se o MinIO ainda não subiu, a criação
+   * lazy no put/get cobre; não bloqueia o start da API.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureBucket();
+    } catch {
+      // MinIO indisponível no boot: a próxima operação reprovisiona.
+    }
   }
 
   private key(ownerId: string, fileId: string): string {
