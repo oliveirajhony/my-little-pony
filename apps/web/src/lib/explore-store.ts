@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { askExploreStream, type ExploreSource } from './explore-api';
 
 /**
@@ -64,8 +64,10 @@ const STUCK_ANSWER = 'Não consegui responder agora. Tente novamente em instante
 const FLUSH_MS = 60;
 
 function toSources(list: ExploreSource[]): ChatSource[] {
-  return list.map((s) => ({
-    id: `${s.documentId}-${s.snippet.slice(0, 12)}`,
+  // Inclui o índice na key: dois chunks do mesmo doc com o mesmo início de snippet
+  // (heading/boilerplate comum) colidiriam senão.
+  return list.map((s, i) => ({
+    id: `${s.documentId}-${i}`,
     title: s.title,
     snippet: s.snippet,
   }));
@@ -107,6 +109,22 @@ export function repairPendingMessages(chats: Chat[]): Chat[] {
 let abortRef: AbortController | null = null;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let tokenBuffer = '';
+let streamingChatId: string | null = null; // qual chat está recebendo o stream
+let streamingActive = false; // trava a persistência durante o streaming
+
+// Storage que NÃO grava enquanto o stream corre: a mensagem em voo é excluída pelo
+// partialize de qualquer forma, então re-serializar o histórico a cada flush (~60ms)
+// só gera jank. A gravação final acontece quando streamingActive volta a false.
+const guardedStorage = createJSONStorage(() => {
+  if (typeof window === 'undefined') return undefined as unknown as Storage;
+  return {
+    getItem: (k) => window.localStorage.getItem(k),
+    setItem: (k, v) => {
+      if (!streamingActive) window.localStorage.setItem(k, v);
+    },
+    removeItem: (k) => window.localStorage.removeItem(k),
+  };
+});
 
 type ExploreState = {
   chats: Chat[];
@@ -132,12 +150,16 @@ export const useExploreStore = create<ExploreState>()(
 
       selectChat: (id) => set({ activeId: id }),
 
-      deleteChat: (id) =>
+      deleteChat: (id) => {
+        // Se o chat apagado é o que está gerando, aborta — senão o stream
+        // continuaria escrevendo num chat inexistente e travaria `sending`.
+        if (id === streamingChatId) abortRef?.abort();
         set((state) => {
           const chats = state.chats.filter((c) => c.id !== id);
           const activeId = state.activeId === id ? null : state.activeId;
           return { chats, activeId };
-        }),
+        });
+      },
 
       stopGeneration: () => abortRef?.abort(),
 
@@ -181,16 +203,16 @@ export const useExploreStore = create<ExploreState>()(
           return { chats: [created, ...state.chats], activeId: created.id, sending: true };
         });
 
-        // Patch imutável da bolha do assistente desta geração.
+        streamingChatId = chatId;
+        streamingActive = true;
+
+        // Patch imutável da bolha do assistente. NÃO bumpa updatedAt (senão o
+        // RecentsRail re-renderiza a cada flush) — o updatedAt é bumpado só no fim.
         const patch = (fn: (m: ChatMessage) => ChatMessage) =>
           set((state) => ({
             chats: state.chats.map((c) =>
               c.id === chatId
-                ? {
-                    ...c,
-                    updatedAt: new Date().toISOString(),
-                    messages: c.messages.map((m) => (m.id === assistantId ? fn(m) : m)),
-                  }
+                ? { ...c, messages: c.messages.map((m) => (m.id === assistantId ? fn(m) : m)) }
                 : c,
             ),
           }));
@@ -246,14 +268,35 @@ export const useExploreStore = create<ExploreState>()(
           }
         } finally {
           flush();
-          patch((m) => ({ ...m, pending: false, streaming: false, stage: undefined }));
+          const aborted = abortRef?.signal.aborted ?? false;
           abortRef = null;
-          set({ sending: false });
+          streamingChatId = null;
+          streamingActive = false; // reabre a persistência: a próxima gravação vale
+
+          // Finaliza a bolha e bumpa updatedAt UMA vez. Se abortou antes de
+          // qualquer conteúdo, remove a bolha vazia (senão fica só o avatar).
+          set((state) => ({
+            sending: false,
+            chats: state.chats.map((c) => {
+              if (c.id !== chatId) return c;
+              const messages = c.messages
+                .map((m) =>
+                  m.id === assistantId
+                    ? { ...m, pending: false, streaming: false, stage: undefined }
+                    : m,
+                )
+                .filter(
+                  (m) => !(aborted && m.id === assistantId && !m.content && !m.sources?.length),
+                );
+              return { ...c, updatedAt: new Date().toISOString(), messages };
+            }),
+          }));
         }
       },
     }),
     {
       name: 'mlp-explore',
+      storage: guardedStorage,
       partialize: (state) => ({
         chats: withoutPendingMessages(state.chats),
         activeId: state.activeId,
