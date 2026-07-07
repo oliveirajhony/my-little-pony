@@ -76,6 +76,27 @@ describe('MessageBubble — citações inline', () => {
     expect(screen.getByText('2 fontes')).toBeInTheDocument();
   });
 
+  it('dedupes the compact line by document (chunks of the same doc → one pill, "1 fonte")', () => {
+    render(
+      <MessageBubble
+        message={assistant({
+          content: 'x [1] y [2]',
+          sources: [
+            source({ id: 's0', documentId: 'd1', title: 'Doc Nativo' }),
+            source({ id: 's1', documentId: 'd1', title: 'Doc Nativo' }),
+          ],
+        })}
+      />,
+    );
+    // Contador conta documentos únicos, não trechos.
+    expect(screen.getByText('1 fonte')).toBeInTheDocument();
+    // Uma única pílula (o link cujo nome é exatamente o título); os chips inline
+    // têm nome "Citação N: …" e não colidem.
+    expect(screen.getAllByRole('link', { name: 'Doc Nativo' })).toHaveLength(1);
+    // As citações inline seguem mapeando o trecho exato (não são deduplicadas).
+    expect(screen.getByRole('link', { name: /Citação 2: Doc Nativo/ })).toBeInTheDocument();
+  });
+
   it('leaves [n] as plain text when there is no matching source', () => {
     render(
       <MessageBubble message={assistant({ content: 'sem fonte [3].', sources: [source()] })} />,

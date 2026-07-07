@@ -424,13 +424,26 @@ function CitationChip({ index, source }: { index: number; source?: ChatSource })
 
 /** Linha compacta de pílulas + contador "N fontes" abaixo da resposta. */
 function CompactSources({ sources }: { sources: ChatSource[] }) {
+  // Dedup por documento: o RAG traz vários trechos (chunks) do mesmo doc; a linha
+  // mostra 1 pílula por documento (o 1º trecho, de maior score). As citações
+  // inline [n] seguem mapeando o trecho exato — só esta linha é enxugada.
+  const docs = useMemo(() => {
+    const seen = new Set<string>();
+    return sources.filter((s) => {
+      const key = s.documentId || s.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [sources]);
+
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-      <span className="text-xs font-medium text-muted-foreground">
-        {sources.length} {sources.length === 1 ? 'fonte' : 'fontes'}
+    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] font-medium text-muted-foreground">
+        {docs.length} {docs.length === 1 ? 'fonte' : 'fontes'}
       </span>
-      {sources.map((source) => (
-        <SourcePill key={source.id} source={source} />
+      {docs.map((source) => (
+        <SourcePill key={source.documentId || source.id} source={source} />
       ))}
     </div>
   );
@@ -441,11 +454,11 @@ function SourcePill({ source }: { source: ChatSource }) {
   const href = sourceHref(source);
   const Icon = source.kind === 'file' ? Paperclip : FileText;
   const pillClass =
-    'inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs text-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    'inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 text-[11px] text-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
   const inner = (
     <>
       <Icon className="size-3 shrink-0 text-muted-foreground" />
-      <span className="max-w-[12rem] truncate">{source.title}</span>
+      <span className="max-w-[10rem] truncate">{source.title}</span>
     </>
   );
 
