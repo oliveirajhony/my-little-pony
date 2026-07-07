@@ -92,6 +92,9 @@ class RawHit:
     score: float
     text: str
     kind: str = "native"
+    # Caminho de seção (headings) do trecho — dá ao LLM o "onde" de cada bloco de
+    # contexto, evitando atribuir dados à entidade errada (ex.: stack↔empresa).
+    headings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

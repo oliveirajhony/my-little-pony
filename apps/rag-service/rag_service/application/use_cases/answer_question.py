@@ -117,12 +117,16 @@ class AnswerQuestion:
 
 
 def _build_context(hits: list[RawHit], max_chars: int) -> str:
-    """Monta blocos numerados [n], respeitando o teto de chars (corta blocos
-    inteiros para não deixar trecho pela metade)."""
+    """Monta blocos numerados [n] com o caminho de seção (headings) à frente do
+    trecho, respeitando o teto de chars (corta blocos inteiros para não deixar
+    trecho pela metade). O breadcrumb dá ao LLM o "onde" de cada trecho — evita
+    atribuir um dado à entidade errada (ex.: uma tecnologia à empresa errada)."""
     blocks: list[str] = []
     used = 0
     for number, hit in enumerate(hits, start=1):
-        block = f"[{number}] {hit.text.strip()}"
+        crumb = " › ".join(h.strip() for h in hit.headings if h.strip())
+        body = f"{crumb}\n{hit.text.strip()}" if crumb else hit.text.strip()
+        block = f"[{number}] {body}"
         if used + len(block) > max_chars and blocks:
             break
         blocks.append(block)
