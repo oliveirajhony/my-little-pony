@@ -2,15 +2,16 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { askExplore } from './explore-api';
+import { askExploreStream, type ExploreSource } from './explore-api';
 
 /**
  * Store da tela "Explorar" — busca híbrida + RAG sobre os documentos e arquivos
- * do usuário. `sendMessage` chama `POST /explore` (recuperação + geração no
- * serviço Python) e preenche `content`/`sources` com a resposta ancorada.
+ * do usuário. `sendMessage` consome `POST /explore/stream` (SSE) e preenche a
+ * bolha do assistente token a token: etapa → fontes → texto ao vivo.
  *
  * Chats e mensagens ficam persistidos em localStorage (`mlp-explore`), então
- * "Recentes" e o histórico sobrevivem a reloads.
+ * "Recentes" e o histórico sobrevivem a reloads (mensagens em voo NÃO são
+ * persistidas — ver `withoutPendingMessages`).
  */
 
 export type ChatRole = 'user' | 'assistant';
@@ -22,13 +23,20 @@ export type ChatSource = {
   snippet: string;
 };
 
+/** Etapa visível da geração (antes/durante os tokens). */
+export type StreamStage = 'queued' | 'retrieving' | 'generating';
+
 export type ChatMessage = {
   id: string;
   role: ChatRole;
   content: string;
   sources?: ChatSource[];
-  /** true enquanto a resposta do assistente está sendo "gerada". */
+  /** true enquanto a resposta do assistente está sendo gerada. */
   pending?: boolean;
+  /** true enquanto tokens estão chegando (distingue "gerando" de "enfileirado"). */
+  streaming?: boolean;
+  /** etapa atual do pipeline, para o indicador de progresso. */
+  stage?: StreamStage;
   createdAt: string;
 };
 
@@ -51,28 +59,54 @@ function titleFrom(text: string): string {
 }
 
 const STUCK_ANSWER = 'Não consegui responder agora. Tente novamente em instantes.';
+// Coalesce de tokens: aplica o buffer ao estado no máximo a cada ~60ms para não
+// re-renderizar a árvore a cada token (mantém o typing suave sem travar).
+const FLUSH_MS = 60;
+
+function toSources(list: ExploreSource[]): ChatSource[] {
+  return list.map((s) => ({
+    id: `${s.documentId}-${s.snippet.slice(0, 12)}`,
+    title: s.title,
+    snippet: s.snippet,
+  }));
+}
 
 /**
  * Remove mensagens em voo antes de persistir: um reload no meio de uma resposta
- * deixaria a bolha "pending" travada para sempre (e congelaria o parcial quando
- * o streaming da Fase C chegar).
+ * deixaria a bolha travada para sempre (e congelaria um parcial de streaming).
  */
 export function withoutPendingMessages(chats: Chat[]): Chat[] {
-  return chats.map((c) => ({ ...c, messages: c.messages.filter((m) => !m.pending) }));
+  return chats.map((c) => ({
+    ...c,
+    messages: c.messages.filter((m) => !m.pending && !m.streaming),
+  }));
 }
 
 /**
  * Rede de segurança para estado persistido por versões anteriores (que ainda
- * pode conter `pending: true`): converte a bolha travada num erro claro.
+ * pode conter `pending`/`streaming`): converte a bolha travada num erro claro.
  */
 export function repairPendingMessages(chats: Chat[]): Chat[] {
   return chats.map((c) => ({
     ...c,
     messages: c.messages.map((m) =>
-      m.pending ? { ...m, pending: false, content: m.content || STUCK_ANSWER } : m,
+      m.pending || m.streaming
+        ? {
+            ...m,
+            pending: false,
+            streaming: false,
+            stage: undefined,
+            content: m.content || STUCK_ANSWER,
+          }
+        : m,
     ),
   }));
 }
+
+// Estado efêmero da geração atual (fora do zustand: não persiste, não re-renderiza).
+let abortRef: AbortController | null = null;
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let tokenBuffer = '';
 
 type ExploreState = {
   chats: Chat[];
@@ -83,6 +117,8 @@ type ExploreState = {
   selectChat: (id: string) => void;
   deleteChat: (id: string) => void;
   sendMessage: (text: string) => Promise<void>;
+  /** Aborta a geração em andamento, preservando o parcial já recebido. */
+  stopGeneration: () => void;
 };
 
 export const useExploreStore = create<ExploreState>()(
@@ -103,35 +139,36 @@ export const useExploreStore = create<ExploreState>()(
           return { chats, activeId };
         }),
 
+      stopGeneration: () => abortRef?.abort(),
+
       sendMessage: async (text) => {
         const trimmed = text.trim();
         if (!trimmed || get().sending) return;
 
         const now = new Date().toISOString();
-        const userMsg: ChatMessage = {
-          id: uid(),
-          role: 'user',
-          content: trimmed,
-          createdAt: now,
-        };
+        const userMsg: ChatMessage = { id: uid(), role: 'user', content: trimmed, createdAt: now };
+        const assistantId = uid();
         const pendingMsg: ChatMessage = {
-          id: uid(),
+          id: assistantId,
           role: 'assistant',
           content: '',
           pending: true,
+          streaming: true,
+          stage: 'queued',
           createdAt: now,
         };
 
         let chatId = get().activeId;
-
         set((state) => {
           if (chatId) {
-            const chats = state.chats.map((c) =>
-              c.id === chatId
-                ? { ...c, messages: [...c.messages, userMsg, pendingMsg], updatedAt: now }
-                : c,
-            );
-            return { chats, sending: true };
+            return {
+              sending: true,
+              chats: state.chats.map((c) =>
+                c.id === chatId
+                  ? { ...c, messages: [...c.messages, userMsg, pendingMsg], updatedAt: now }
+                  : c,
+              ),
+            };
           }
           const created: Chat = {
             id: uid(),
@@ -144,38 +181,75 @@ export const useExploreStore = create<ExploreState>()(
           return { chats: [created, ...state.chats], activeId: created.id, sending: true };
         });
 
-        let content: string;
-        let sources: ChatSource[] | undefined;
-        try {
-          const result = await askExplore(trimmed);
-          content = result.answer;
-          sources = result.sources.map((s) => ({
-            id: `${s.documentId}-${s.snippet.slice(0, 12)}`,
-            title: s.title,
-            snippet: s.snippet,
+        // Patch imutável da bolha do assistente desta geração.
+        const patch = (fn: (m: ChatMessage) => ChatMessage) =>
+          set((state) => ({
+            chats: state.chats.map((c) =>
+              c.id === chatId
+                ? {
+                    ...c,
+                    updatedAt: new Date().toISOString(),
+                    messages: c.messages.map((m) => (m.id === assistantId ? fn(m) : m)),
+                  }
+                : c,
+            ),
           }));
-        } catch {
-          content = 'Não consegui responder agora. Tente novamente em instantes.';
-          sources = undefined;
-        }
-        const doneAt = new Date().toISOString();
 
-        set((state) => ({
-          sending: false,
-          chats: state.chats.map((c) =>
-            c.id === chatId
-              ? {
-                  ...c,
-                  updatedAt: doneAt,
-                  messages: c.messages.map((m) =>
-                    m.id === pendingMsg.id
-                      ? { ...m, content, sources, pending: false, createdAt: doneAt }
-                      : m,
-                  ),
-                }
-              : c,
-          ),
-        }));
+        const flush = () => {
+          if (flushTimer) {
+            clearTimeout(flushTimer);
+            flushTimer = null;
+          }
+          if (!tokenBuffer) return;
+          const chunk = tokenBuffer;
+          tokenBuffer = '';
+          patch((m) => ({ ...m, content: m.content + chunk }));
+        };
+        const scheduleFlush = () => {
+          if (flushTimer) return;
+          flushTimer = setTimeout(() => {
+            flushTimer = null;
+            flush();
+          }, FLUSH_MS);
+        };
+
+        abortRef = new AbortController();
+        let errored = false;
+        try {
+          for await (const ev of askExploreStream(trimmed, abortRef.signal)) {
+            switch (ev.type) {
+              case 'status':
+                patch((m) => ({ ...m, stage: ev.stage }));
+                break;
+              case 'sources':
+                patch((m) => ({ ...m, sources: toSources(ev.sources) }));
+                break;
+              case 'token':
+                tokenBuffer += ev.text;
+                scheduleFlush();
+                break;
+              case 'error':
+                flush();
+                errored = true;
+                patch((m) => ({ ...m, content: m.content || STUCK_ANSWER }));
+                break;
+              case 'done':
+                break;
+            }
+          }
+          flush();
+        } catch {
+          flush();
+          // Abort (botão Parar) preserva o parcial; erro real vira mensagem fixa.
+          if (!abortRef?.signal.aborted && !errored) {
+            patch((m) => ({ ...m, content: m.content || STUCK_ANSWER }));
+          }
+        } finally {
+          flush();
+          patch((m) => ({ ...m, pending: false, streaming: false, stage: undefined }));
+          abortRef = null;
+          set({ sending: false });
+        }
       },
     }),
     {

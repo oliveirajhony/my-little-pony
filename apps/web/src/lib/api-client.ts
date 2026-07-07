@@ -115,3 +115,35 @@ export async function apiFetchBlob(path: string, options: RequestInit = {}): Pro
   }
   return res.blob();
 }
+
+/**
+ * Como `apiFetch`, mas devolve a Response CRUA para consumir o corpo como stream
+ * (SSE). O refresh-on-401 acontece ANTES de ler o corpo (senão o stream seria
+ * consumido no primeiro request e não daria pra repetir). `signal` permite
+ * cancelar a geração (botão Parar / troca de conversa).
+ */
+export async function apiFetchStream(path: string, options: RequestInit = {}): Promise<Response> {
+  const send = () => {
+    const token = getAccessToken();
+    const init = baseInit(options);
+    return fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: token ? { ...init.headers, Authorization: `Bearer ${token}` } : init.headers,
+    });
+  };
+
+  let res = await send();
+  if (res.status === 401 && (await refreshSession())) {
+    res = await send();
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const error: ApiError = {
+      status: res.status,
+      code: (data as { code?: string } | null)?.code,
+      message: (data as { message?: string } | null)?.message ?? 'Algo deu errado. Tente de novo.',
+    };
+    throw error;
+  }
+  return res;
+}
