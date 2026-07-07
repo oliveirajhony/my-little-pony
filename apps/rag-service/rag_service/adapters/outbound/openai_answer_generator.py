@@ -11,7 +11,7 @@ Chamada HTTP síncrona (httpx) — o endpoint /answer roda em threadpool.
 from __future__ import annotations
 
 import json
-from typing import Iterator
+from collections.abc import Iterator
 
 import httpx
 
@@ -68,7 +68,12 @@ class OpenAiAnswerGenerator:
                 data = line[len("data:") :].strip()
                 if data == "[DONE]":
                     break
-                delta = json.loads(data)["choices"][0].get("delta", {})
+                # Chunks legítimos podem vir sem choices (ex.: frame final de
+                # usage quando stream_options.include_usage, ou keepalive de proxy).
+                choices = json.loads(data).get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta", {})
                 piece = delta.get("content", "")
                 if piece:
                     yield piece

@@ -1,5 +1,5 @@
 import type { AnswerGateway, GatewayAnswer } from '@my-little-pony/core';
-import { Logger } from '@nestjs/common';
+import { PythonServiceClient } from '../http/python-service.client';
 
 const NOT_CONFIGURED: GatewayAnswer = {
   answer: 'A busca inteligente ainda não está disponível.',
@@ -7,35 +7,32 @@ const NOT_CONFIGURED: GatewayAnswer = {
   sources: [],
 };
 
+type AnswerBody = {
+  answer: string;
+  grounded: boolean;
+  sources: Array<{ documentId: string; score: number; snippet: string; kind?: string }>;
+};
+
 /**
  * AnswerGateway adapter proxying to the Python RAG service (/answer). Until that
  * service is deployed (SEARCH_SERVICE_URL empty) it returns a graceful
- * not-configured answer instead of erroring.
+ * not-configured answer. A configured-but-failing service is logged by the
+ * client, not disguised as a cheerful "not available" answer.
  */
 export class HttpAnswerGateway implements AnswerGateway {
-  private readonly logger = new Logger(HttpAnswerGateway.name);
+  private readonly client: PythonServiceClient;
 
-  constructor(
-    private readonly serviceUrl: string,
-    private readonly serviceToken: string,
-  ) {}
+  constructor(serviceUrl: string, serviceToken: string, timeoutMs = 15_000) {
+    this.client = new PythonServiceClient(serviceUrl, serviceToken, timeoutMs);
+  }
 
   async answer(input: { ownerId: string; q: string }): Promise<GatewayAnswer> {
-    if (!this.serviceUrl) return NOT_CONFIGURED;
+    if (!this.client.configured) return NOT_CONFIGURED; // not deployed yet — expected
     try {
-      const headers: Record<string, string> = { 'content-type': 'application/json' };
-      if (this.serviceToken) headers.authorization = `Bearer ${this.serviceToken}`;
-      const response = await fetch(`${this.serviceUrl}/answer`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ ownerId: input.ownerId, query: input.q }),
+      const body = await this.client.postJson<AnswerBody>('/answer', {
+        ownerId: input.ownerId,
+        query: input.q,
       });
-      if (!response.ok) return NOT_CONFIGURED;
-      const body = (await response.json()) as {
-        answer: string;
-        grounded: boolean;
-        sources: Array<{ documentId: string; score: number; snippet: string; kind?: string }>;
-      };
       return {
         answer: body.answer,
         grounded: body.grounded,
@@ -46,9 +43,8 @@ export class HttpAnswerGateway implements AnswerGateway {
           kind: s.kind === 'file' ? 'file' : 'native',
         })),
       };
-    } catch (error) {
-      this.logger.warn(`answer service unreachable: ${String(error)}`);
-      return NOT_CONFIGURED;
+    } catch {
+      return NOT_CONFIGURED; // degrade gracefully — the client already logged
     }
   }
 }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from rag_service.adapters.fakes.fakes import FakeAnswerGenerator
-from rag_service.application.use_cases.answer_question import AnswerQuestion, NO_ANSWER
+from rag_service.application.use_cases.answer_question import NO_ANSWER, AnswerQuestion
 from rag_service.domain.models import (
     AnswerSourcesEvent,
     AnswerTokenEvent,

@@ -8,6 +8,13 @@ export type AuthStatus = 'loading' | 'authed' | 'guest';
 
 type SessionResponse = { user: AuthUser; accessToken: string };
 
+// Single-flight do refresh: quando o access token expira, várias requisições em
+// voo recebem 401 ~ao mesmo tempo e chamariam /auth/refresh em paralelo. Com
+// rotação do refresh token, essas chamadas concorrentes invalidam umas às outras
+// e derrubam a sessão. Compartilhando uma única promise, todas esperam o mesmo
+// refresh.
+let refreshInFlight: Promise<boolean> | null = null;
+
 type AuthState = {
   user: AuthUser | null;
   /** Guardado só em memória (não em localStorage) — seguro contra XSS. */
@@ -63,17 +70,23 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ user: null, accessToken: null, status: 'guest' });
   },
 
-  refresh: async () => {
-    try {
-      const { accessToken } = await authFetch<{ accessToken: string }>('/auth/refresh', {
-        method: 'POST',
-      });
-      set({ accessToken });
-      return true;
-    } catch {
-      set({ user: null, accessToken: null, status: 'guest' });
-      return false;
-    }
+  refresh: () => {
+    if (refreshInFlight) return refreshInFlight;
+    refreshInFlight = (async () => {
+      try {
+        const { accessToken } = await authFetch<{ accessToken: string }>('/auth/refresh', {
+          method: 'POST',
+        });
+        set({ accessToken });
+        return true;
+      } catch {
+        set({ user: null, accessToken: null, status: 'guest' });
+        return false;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+    return refreshInFlight;
   },
 
   hydrate: async () => {

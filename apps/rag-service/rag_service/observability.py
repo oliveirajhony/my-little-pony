@@ -24,6 +24,16 @@ INDEX_LATENCY = Histogram("rag_index_seconds", "Latência de indexação de um d
 SEARCH_REQUESTS = Counter("rag_search_requests_total", "Buscas realizadas")
 SEARCH_LATENCY = Histogram("rag_search_seconds", "Latência da busca")
 
+# --- Métricas da API (RAG generativo / streaming) --- #
+ANSWER_STREAM_REQUESTS = Counter(
+    "rag_answer_stream_requests_total", "Streams de resposta iniciados"
+)
+ANSWER_STREAM_ERRORS = Counter(
+    "rag_answer_stream_errors_total",
+    "Streams encerrados por erro (rotulado pela causa)",
+    ["reason"],  # queue_full | idle_timeout | internal
+)
+
 
 class _JsonFormatter(logging.Formatter):
     """Formata cada log como uma linha JSON (ingestão por ELK/Loki/etc.)."""
