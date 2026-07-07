@@ -1,8 +1,8 @@
 'use client';
 
-import { ArrowUp, FileText, Loader2, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowUp, FileText, Loader2, Plus, Search, Sparkles, Square, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useArquivosStore } from '../../lib/arquivos-store';
 import { useDocuments } from '../../lib/documents-store';
-import { type Chat, type ChatMessage, useExploreStore } from '../../lib/explore-store';
+import {
+  type Chat,
+  type ChatMessage,
+  type StreamStage,
+  useExploreStore,
+} from '../../lib/explore-store';
 import { relativeDate } from '../../lib/format-date';
 
 export function ExploreView() {
@@ -30,6 +35,10 @@ export function ExploreView() {
   // Evita mismatch de hidratação: o estado persistido só aparece após o mount.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Sair da tela (navegação/unmount) aborta uma geração em andamento — senão o
+  // fetch/stream seguiria vivo escrevendo num componente desmontado.
+  useEffect(() => () => useExploreStore.getState().stopGeneration(), []);
 
   const active = mounted ? (chats.find((c) => c.id === activeId) ?? null) : null;
   const messages = active?.messages ?? [];
@@ -219,14 +228,28 @@ function Conversation({
   sending: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const stopGeneration = useExploreStore((s) => s.stopGeneration);
+  // Pin-to-bottom intencional: só rola sozinho se o usuário JÁ está no fim. Se ele
+  // rolou pra cima pra reler, os tokens não o arrastam de volta.
+  const pinnedRef = useRef(true);
 
   useLayoutEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: rola ao chegar mensagem nova
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const el = bottomRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([entry]) => {
+      pinnedRef.current = entry.isIntersecting;
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rola ao chegar conteúdo novo, se pinado
+  useEffect(() => {
+    if (pinnedRef.current) bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [messages]);
 
   return (
@@ -242,6 +265,20 @@ function Conversation({
 
       <div className="border-t bg-background">
         <div className="mx-auto w-full max-w-2xl px-4 py-3">
+          {sending && (
+            <div className="mb-2 flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={stopGeneration}
+              >
+                <Square className="size-3.5" />
+                Parar
+              </Button>
+            </div>
+          )}
           <Composer onSend={onSend} sending={sending} />
           <p className="mt-2 text-center text-xs text-muted-foreground">
             As respostas se baseiam nos seus documentos publicados e arquivos importados.
@@ -252,7 +289,15 @@ function Conversation({
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+const STAGE_LABEL: Record<StreamStage, string> = {
+  queued: 'Na fila…',
+  retrieving: 'Consultando seus documentos e arquivos…',
+  generating: 'Gerando resposta…',
+};
+
+// memo: durante o streaming a lista de mensagens muda a cada flush (~60ms); sem
+// memo, TODAS as bolhas re-renderizariam. Só a que muda de fato re-renderiza.
+const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -263,49 +308,59 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     );
   }
 
+  // Etapa antes de qualquer texto/fonte (fila → recuperando → gerando).
+  const showStage = message.streaming && !message.content && !message.sources?.length;
+
   return (
     <div className="flex gap-3">
       <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
         <Sparkles className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
-        {message.pending ? (
+        {/* Fontes aparecem ANTES dos tokens (já conhecidas após o rerank). */}
+        {message.sources && message.sources.length > 0 && (
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Fontes</p>
+            <div className="flex flex-col gap-1.5">
+              {message.sources.map((source) => (
+                <div
+                  key={source.id}
+                  className="flex items-start gap-2.5 rounded-lg border bg-card px-3 py-2"
+                >
+                  <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{source.title}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">{source.snippet}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showStage ? (
           <div className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Consultando seus documentos e arquivos…
+            {STAGE_LABEL[message.stage ?? 'retrieving']}
           </div>
         ) : (
-          <>
-            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
-              <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
-            </div>
-            {message.sources && message.sources.length > 0 && (
-              <div className="mt-3">
-                <p className="mb-1.5 text-xs font-medium text-muted-foreground">Fontes</p>
-                <div className="flex flex-col gap-1.5">
-                  {message.sources.map((source) => (
-                    <div
-                      key={source.id}
-                      className="flex items-start gap-2.5 rounded-lg border bg-card px-3 py-2"
-                    >
-                      <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{source.title}</p>
-                        <p className="line-clamp-2 text-xs text-muted-foreground">
-                          {source.snippet}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div
+            // Anuncia a resposta UMA vez, ao concluir. Durante o streaming fica
+            // 'off' — senão o leitor de tela relê o texto inteiro a cada flush.
+            aria-live={message.streaming ? 'off' : 'polite'}
+            aria-busy={message.streaming}
+            className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
+          >
+            <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
+            {message.streaming && (
+              <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-foreground/60 align-middle" />
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
   );
-}
+});
 
 /* -------------------------------- Composer -------------------------------- */
 
