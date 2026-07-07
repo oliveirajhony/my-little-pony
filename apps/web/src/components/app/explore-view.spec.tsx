@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -123,5 +123,47 @@ describe('MessageBubble — citações inline', () => {
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('link', { name: 'Abrir documento' })).toBeNull());
+  });
+});
+
+describe('MessageBubble — caret de streaming (#47)', () => {
+  it('renderiza o caret inline (dentro do último parágrafo) durante a geração', () => {
+    const { container } = render(
+      <MessageBubble message={assistant({ content: 'Gerando texto', streaming: true })} />,
+    );
+    const caret = container.querySelector('[data-caret]');
+    expect(caret).not.toBeNull();
+    // Inline no mesmo fluxo do texto — não é um bloco solto abaixo.
+    expect(caret?.closest('p')).not.toBeNull();
+  });
+
+  it('não renderiza o caret quando a resposta está concluída', () => {
+    const { container } = render(
+      <MessageBubble message={assistant({ content: 'Resposta final' })} />,
+    );
+    expect(container.querySelector('[data-caret]')).toBeNull();
+  });
+});
+
+describe('MessageBubble — barra de ações / copiar (#48)', () => {
+  it('copia o texto da resposta e mostra o feedback "Copiado"', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    render(<MessageBubble message={assistant({ content: 'Resposta para copiar' })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar resposta' }));
+
+    expect(writeText).toHaveBeenCalledWith('Resposta para copiar');
+    expect(await screen.findByText('Copiado')).toBeInTheDocument();
+  });
+
+  it('reserva o slot "Baixar" desabilitado (Fatia 2)', () => {
+    render(<MessageBubble message={assistant({ content: 'x' })} />);
+    expect(screen.getByRole('button', { name: /Baixar/ })).toBeDisabled();
+  });
+
+  it('não mostra a barra de ações enquanto a resposta está sendo gerada', () => {
+    render(<MessageBubble message={assistant({ content: 'parcial', streaming: true })} />);
+    expect(screen.queryByRole('button', { name: 'Copiar resposta' })).toBeNull();
   });
 });
