@@ -6,6 +6,8 @@ falha com retry disponível→retry, falha esgotada→DLQ + completed(failed).
 
 import json
 
+import pika
+
 from rag_service.adapters.fakes import (
     FakeChunker,
     FakeDenseEmbedder,
@@ -152,3 +154,51 @@ def test_deindex_handle_deletes_vectors_and_acks():
 
     assert index.count("doc-1") == 0
     assert acked == [7]
+
+
+class _FakeChannel:
+    def __init__(self, fail: bool) -> None:
+        self._fail = fail
+
+    def exchange_declare(self, **_kwargs) -> None: ...
+    def queue_declare(self, **_kwargs) -> None: ...
+    def queue_bind(self, **_kwargs) -> None: ...
+    def basic_qos(self, **_kwargs) -> None: ...
+    def basic_consume(self, **_kwargs) -> None: ...
+
+    def start_consuming(self) -> None:
+        # Simula o broker derrubando a conexão no meio do consumo (o caso real:
+        # RabbitMQ reiniciado → ConnectionClosedByBroker sobe do start_consuming).
+        if self._fail:
+            raise pika.exceptions.ConnectionClosedByBroker(320, "CONNECTION_FORCED - shutdown")
+
+
+class _FakeConnection:
+    def __init__(self, fail: bool) -> None:
+        self._channel = _FakeChannel(fail)
+
+    def channel(self) -> _FakeChannel:
+        return self._channel
+
+    def close(self) -> None: ...
+
+
+def test_start_reconecta_quando_o_broker_derruba_a_conexao(monkeypatch):
+    """Um restart do RabbitMQ não pode derrubar o worker de vez — ele reconecta."""
+    consumer, _ = build({})
+    state = {"connects": 0, "sleeps": 0}
+
+    def fake_connect() -> _FakeConnection:
+        state["connects"] += 1
+        # 1ª conexão cai durante o consumo; a 2ª consome e retorna limpo.
+        return _FakeConnection(fail=state["connects"] == 1)
+
+    monkeypatch.setattr(consumer, "_connect", fake_connect)
+    monkeypatch.setattr(
+        consumer, "_sleep", lambda _s: state.__setitem__("sleeps", state["sleeps"] + 1)
+    )
+
+    consumer.start()
+
+    assert state["connects"] == 2  # reconectou após a queda
+    assert state["sleeps"] == 1  # esperou (backoff) antes de reconectar
