@@ -19,7 +19,7 @@ Grounding:
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 from rag_service.application.ports import (
     AnswerGenerator,
@@ -29,6 +29,7 @@ from rag_service.application.ports import (
     VectorIndex,
 )
 from rag_service.application.retrieval import retrieve_and_rerank
+from rag_service.application.snippet import snippet as _snippet
 from rag_service.domain.models import (
     Answer,
     AnswerEvent,
@@ -40,7 +41,6 @@ from rag_service.domain.models import (
 )
 
 NO_ANSWER = "Não encontrei essa informação nos documentos."
-SNIPPET_MAX = 280
 
 
 class AnswerQuestion:
@@ -64,6 +64,13 @@ class AnswerQuestion:
         self._top_k = top_k
         self._max_context_chars = max_context_chars
 
+    def _retrieve(self, query: SearchQuery) -> list[RawHit]:
+        """Recupera + rerankeia + seleciona os trechos de contexto. Compartilhado
+        pelo caminho síncrono (execute) e pelo streaming (stream)."""
+        return self._select(
+            retrieve_and_rerank(query, self._dense, self._sparse, self._index, self._reranker)
+        )
+
     def _select(self, ranked: list[RawHit]) -> list[RawHit]:
         # Fallback: nada cruzou o limiar, mas há candidatos → responde a partir
         # dos melhores em vez de recusar (o LLM ancora ou recusa pelo prompt).
@@ -84,9 +91,7 @@ class AnswerQuestion:
         ]
 
     def execute(self, query: SearchQuery) -> Answer:
-        relevant = self._select(
-            retrieve_and_rerank(query, self._dense, self._sparse, self._index, self._reranker)
-        )
+        relevant = self._retrieve(query)
 
         # Só recusa sem chamar o LLM quando NÃO há candidato algum (contexto vazio).
         if not relevant:
@@ -98,9 +103,7 @@ class AnswerQuestion:
         return Answer(answer=answer, grounded=True, sources=self._to_sources(relevant))
 
     def stream(self, query: SearchQuery) -> Iterator[AnswerEvent]:
-        relevant = self._select(
-            retrieve_and_rerank(query, self._dense, self._sparse, self._index, self._reranker)
-        )
+        relevant = self._retrieve(query)
 
         if not relevant:
             yield AnswerSourcesEvent(sources=[], grounded=False)
@@ -125,10 +128,3 @@ def _build_context(hits: list[RawHit], max_chars: int) -> str:
         blocks.append(block)
         used += len(block)
     return "\n\n".join(blocks)
-
-
-def _snippet(text: str) -> str:
-    clean = " ".join((text or "").split())
-    if len(clean) <= SNIPPET_MAX:
-        return clean
-    return clean[:SNIPPET_MAX].rstrip() + "…"

@@ -2,7 +2,9 @@
 
 import { ArrowUp, FileText, Loader2, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -274,8 +276,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         ) : (
           <>
-            <div className="text-sm leading-relaxed">
-              <RichText text={message.content} />
+            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
+              <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
             </div>
             {message.sources && message.sources.length > 0 && (
               <div className="mt-3">
@@ -303,25 +305,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       </div>
     </div>
   );
-}
-
-/** Renderiza texto simples com **negrito** e quebras de linha. */
-function RichText({ text }: { text: string }): ReactNode {
-  return text.split('\n').map((line, lineIndex) => (
-    // biome-ignore lint/suspicious/noArrayIndexKey: linhas de texto estático
-    <span key={lineIndex} className="block min-h-[0.5em]">
-      {line.split(/(\*\*[^*]+\*\*)/g).map((part, partIndex) =>
-        part.startsWith('**') && part.endsWith('**') ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: trechos de texto estático
-          <strong key={partIndex} className="font-semibold">
-            {part.slice(2, -2)}
-          </strong>
-        ) : (
-          part
-        ),
-      )}
-    </span>
-  ));
 }
 
 /* -------------------------------- Composer -------------------------------- */
