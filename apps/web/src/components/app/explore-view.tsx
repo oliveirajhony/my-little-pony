@@ -1,11 +1,23 @@
 'use client';
 
-import { ArrowUp, FileText, Loader2, Plus, Search, Sparkles, Square, Trash2 } from 'lucide-react';
+import {
+  ArrowUp,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Paperclip,
+  Plus,
+  Search,
+  Sparkles,
+  Square,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import Markdown from 'react-markdown';
+import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -14,6 +26,7 @@ import { useDocuments } from '../../lib/documents-store';
 import {
   type Chat,
   type ChatMessage,
+  type ChatSource,
   type StreamStage,
   useExploreStore,
 } from '../../lib/explore-store';
@@ -297,7 +310,22 @@ const STAGE_LABEL: Record<StreamStage, string> = {
 
 // memo: durante o streaming a lista de mensagens muda a cada flush (~60ms); sem
 // memo, TODAS as bolhas re-renderizariam. Só a que muda de fato re-renderiza.
-const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMessage }) {
+export const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMessage }) {
+  const sources = message.sources ?? [];
+
+  // Mapeia `[n]` (transformado em <cite> pelo rehypeCitations) para a fonte
+  // sources[n-1]. Memo por `sources`: o conteúdo muda a cada flush, mas as
+  // fontes não — evita recriar os renderers durante o streaming.
+  const citationComponents = useMemo<Components>(
+    () => ({
+      cite: ({ node }) => {
+        const index = Number(node?.properties?.dataCitation);
+        return <CitationChip index={index} source={sources[index - 1]} />;
+      },
+    }),
+    [sources],
+  );
+
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -309,7 +337,7 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMe
   }
 
   // Etapa antes de qualquer texto/fonte (fila → recuperando → gerando).
-  const showStage = message.streaming && !message.content && !message.sources?.length;
+  const showStage = message.streaming && !message.content && sources.length === 0;
 
   return (
     <div className="flex gap-3">
@@ -317,50 +345,234 @@ const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMe
         <Sparkles className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
-        {/* Fontes aparecem ANTES dos tokens (já conhecidas após o rerank). */}
-        {message.sources && message.sources.length > 0 && (
-          <div className="mb-3">
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Fontes</p>
-            <div className="flex flex-col gap-1.5">
-              {message.sources.map((source) => (
-                <div
-                  key={source.id}
-                  className="flex items-start gap-2.5 rounded-lg border bg-card px-3 py-2"
-                >
-                  <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{source.title}</p>
-                    <p className="line-clamp-2 text-xs text-muted-foreground">{source.snippet}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {showStage ? (
           <div className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
             {STAGE_LABEL[message.stage ?? 'retrieving']}
           </div>
         ) : (
-          <div
-            // Anuncia a resposta UMA vez, ao concluir. Durante o streaming fica
-            // 'off' — senão o leitor de tela relê o texto inteiro a cada flush.
-            aria-live={message.streaming ? 'off' : 'polite'}
-            aria-busy={message.streaming}
-            className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
-          >
-            <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
-            {message.streaming && (
-              <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-foreground/60 align-middle" />
-            )}
-          </div>
+          <>
+            <div
+              // Anuncia a resposta UMA vez, ao concluir. Durante o streaming fica
+              // 'off' — senão o leitor de tela relê o texto inteiro a cada flush.
+              aria-live={message.streaming ? 'off' : 'polite'}
+              aria-busy={message.streaming}
+              className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed"
+            >
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeCitations]}
+                components={citationComponents}
+              >
+                {message.content}
+              </Markdown>
+              {message.streaming && (
+                <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-foreground/60 align-middle" />
+              )}
+            </div>
+
+            {/* Linha de fontes compacta abaixo da resposta (estilo Perplexity). */}
+            {sources.length > 0 && <CompactSources sources={sources} />}
+          </>
         )}
       </div>
     </div>
   );
 });
+
+/* ------------------------------- Citações -------------------------------- */
+
+/** Rota que abre a fonte: doc nativo → editor; arquivo importado → Arquivos. */
+function sourceHref(source: ChatSource): string | null {
+  if (!source.documentId) return null;
+  return source.kind === 'file'
+    ? `/app/arquivos?file=${source.documentId}`
+    : `/app/editor?id=${source.documentId}`;
+}
+
+/** Marcador `[n]` inline: chip hoverável que abre a fonte citada. */
+function CitationChip({ index, source }: { index: number; source?: ChatSource }) {
+  // `[n]` sem fonte correspondente (LLM citou fora do intervalo): mantém o texto cru.
+  if (!source) {
+    return <span className="text-muted-foreground">[{index}]</span>;
+  }
+
+  const href = sourceHref(source);
+  const label = `Citação ${index}: ${source.title}`;
+  const chipClass =
+    'ml-0.5 inline-flex h-[1.15em] min-w-[1.15em] items-center justify-center rounded-[0.3rem] bg-muted px-1 align-super text-[0.7em] font-medium leading-none text-muted-foreground no-underline transition-colors hover:bg-primary/15 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
+  return (
+    <HoverCard>
+      <HoverCardTrigger asChild>
+        {href ? (
+          <Link href={href} aria-label={label} className={chipClass}>
+            {index}
+          </Link>
+        ) : (
+          <button type="button" aria-label={label} className={chipClass}>
+            {index}
+          </button>
+        )}
+      </HoverCardTrigger>
+      <HoverCardContent>
+        <SourceCardBody source={source} />
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+/** Linha compacta de pílulas + contador "N fontes" abaixo da resposta. */
+function CompactSources({ sources }: { sources: ChatSource[] }) {
+  // Dedup por documento: o RAG traz vários trechos (chunks) do mesmo doc; a linha
+  // mostra 1 pílula por documento (o 1º trecho, de maior score). As citações
+  // inline [n] seguem mapeando o trecho exato — só esta linha é enxugada.
+  const docs = useMemo(() => {
+    const seen = new Set<string>();
+    return sources.filter((s) => {
+      const key = s.documentId || s.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [sources]);
+
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] font-medium text-muted-foreground">
+        {docs.length} {docs.length === 1 ? 'fonte' : 'fontes'}
+      </span>
+      {docs.map((source) => (
+        <SourcePill key={source.documentId || source.id} source={source} />
+      ))}
+    </div>
+  );
+}
+
+/** Pílula da linha de fontes: ícone + título, com o mesmo hover card. */
+function SourcePill({ source }: { source: ChatSource }) {
+  const href = sourceHref(source);
+  const Icon = source.kind === 'file' ? Paperclip : FileText;
+  const pillClass =
+    'inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 text-[11px] text-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  const inner = (
+    <>
+      <Icon className="size-3 shrink-0 text-muted-foreground" />
+      <span className="max-w-[10rem] truncate">{source.title}</span>
+    </>
+  );
+
+  return (
+    <HoverCard>
+      <HoverCardTrigger asChild>
+        {href ? (
+          <Link href={href} className={pillClass}>
+            {inner}
+          </Link>
+        ) : (
+          <button type="button" className={pillClass}>
+            {inner}
+          </button>
+        )}
+      </HoverCardTrigger>
+      <HoverCardContent>
+        <SourceCardBody source={source} />
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+/** Conteúdo do hover card: título, trecho no contexto e ação de abrir. */
+function SourceCardBody({ source }: { source: ChatSource }) {
+  const href = sourceHref(source);
+  const isFile = source.kind === 'file';
+  const Icon = isFile ? Paperclip : FileText;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-start gap-2">
+        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <p className="min-w-0 text-sm font-medium leading-snug">{source.title}</p>
+      </div>
+      {source.snippet && (
+        <p className="line-clamp-4 text-xs leading-relaxed text-muted-foreground">
+          {source.snippet}
+        </p>
+      )}
+      {href && (
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="mt-0.5 h-8 w-full justify-center gap-1.5"
+        >
+          <Link href={href}>
+            <ExternalLink className="size-3.5" />
+            {isFile ? 'Abrir arquivo' : 'Abrir documento'}
+          </Link>
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Nó mínimo do hast que o rehypeCitations toca (evita depender de @types/hast). */
+type HastNode = {
+  type: string;
+  tagName?: string;
+  value?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+
+const CITATION_RE = /\[(\d+)\]/g;
+
+/**
+ * Plugin rehype: transforma marcadores `[n]` em texto num elemento `<cite>` com
+ * `data-citation="n"`, para a UI trocá-lo por um chip de citação. Pula conteúdo
+ * de código (`code`/`pre`) — `[0]` num snippet não é citação.
+ */
+function rehypeCitations() {
+  return (tree: HastNode) => visitCitations(tree, false);
+}
+
+function visitCitations(node: HastNode, inCode: boolean) {
+  if (!node.children) return;
+  const next: HastNode[] = [];
+  for (const child of node.children) {
+    if (child.type === 'element') {
+      const code = inCode || child.tagName === 'code' || child.tagName === 'pre';
+      visitCitations(child, code);
+      next.push(child);
+    } else if (child.type === 'text' && !inCode && child.value) {
+      next.push(...splitCitations(child.value));
+    } else {
+      next.push(child);
+    }
+  }
+  node.children = next;
+}
+
+function splitCitations(value: string): HastNode[] {
+  const out: HastNode[] = [];
+  let last = 0;
+  CITATION_RE.lastIndex = 0;
+  let match = CITATION_RE.exec(value);
+  while (match) {
+    if (match.index > last) out.push({ type: 'text', value: value.slice(last, match.index) });
+    out.push({
+      type: 'element',
+      tagName: 'cite',
+      properties: { dataCitation: match[1] },
+      children: [{ type: 'text', value: match[0] }],
+    });
+    last = match.index + match[0].length;
+    match = CITATION_RE.exec(value);
+  }
+  if (out.length === 0) return [{ type: 'text', value }];
+  if (last < value.length) out.push({ type: 'text', value: value.slice(last) });
+  return out;
+}
 
 /* -------------------------------- Composer -------------------------------- */
 
