@@ -2,6 +2,9 @@
 
 import {
   ArrowUp,
+  Check,
+  Copy,
+  Download,
   ExternalLink,
   FileText,
   Loader2,
@@ -322,6 +325,9 @@ export const MessageBubble = memo(function MessageBubble({ message }: { message:
         const index = Number(node?.properties?.dataCitation);
         return <CitationChip index={index} source={sources[index - 1]} />;
       },
+      // Caret de streaming: o rehypeStreamingCaret injeta um <data> no fim do
+      // texto para o caret ficar inline (colado ao último caractere).
+      data: () => <StreamCaret />,
     }),
     [sources],
   );
@@ -361,18 +367,20 @@ export const MessageBubble = memo(function MessageBubble({ message }: { message:
             >
               <Markdown
                 remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeCitations]}
+                rehypePlugins={
+                  message.streaming ? [rehypeCitations, rehypeStreamingCaret] : [rehypeCitations]
+                }
                 components={citationComponents}
               >
                 {message.content}
               </Markdown>
-              {message.streaming && (
-                <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-foreground/60 align-middle" />
-              )}
             </div>
 
             {/* Linha de fontes compacta abaixo da resposta (estilo Perplexity). */}
             {sources.length > 0 && <CompactSources sources={sources} />}
+
+            {/* Barra de ações — só na resposta concluída (não durante o stream). */}
+            {!message.streaming && message.content && <MessageActions content={message.content} />}
           </>
         )}
       </div>
@@ -516,6 +524,67 @@ function SourceCardBody({ source }: { source: ChatSource }) {
   );
 }
 
+/* --------------------- Caret de streaming + ações (#47/#48) --------------- */
+
+/** Caret piscante colado ao último caractere gerado (inline, sem reflow). */
+function StreamCaret() {
+  return (
+    <span
+      data-caret
+      aria-hidden
+      className="ml-px inline-block h-[1em] w-[2px] translate-y-[0.15em] animate-pulse rounded-full bg-foreground/70 align-baseline"
+    />
+  );
+}
+
+/** Barra de ações da resposta concluída: copiar (Baixar reservado p/ Fatia 2). */
+function MessageActions({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard indisponível (permissão / contexto inseguro) — falha silenciosa.
+    }
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-0.5">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+        onClick={copy}
+        aria-label="Copiar resposta"
+      >
+        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        {copied ? 'Copiado' : 'Copiar'}
+      </Button>
+      {/* Slot do Baixar (Fatia 2 / #49) — reservado, desabilitado por ora. */}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled
+        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+        aria-label="Baixar resposta (em breve)"
+        title="Em breve"
+      >
+        <Download className="size-3.5" />
+        Baixar
+      </Button>
+    </div>
+  );
+}
+
 /** Nó mínimo do hast que o rehypeCitations toca (evita depender de @types/hast). */
 type HastNode = {
   type: string;
@@ -524,6 +593,33 @@ type HastNode = {
   properties?: Record<string, unknown>;
   children?: HastNode[];
 };
+
+/**
+ * Plugin rehype (só no streaming): anexa um `<data data-caret>` ao fim do último
+ * bloco, para o caret ficar no mesmo fluxo do texto — colado ao último caractere,
+ * inline, sem "pulo" a cada flush. Some no `done` (o plugin não roda mais).
+ */
+function rehypeStreamingCaret() {
+  return (tree: HastNode) => {
+    const caret: HastNode = {
+      type: 'element',
+      tagName: 'data',
+      properties: { dataCaret: '1' },
+      children: [],
+    };
+    const children = tree.children;
+    if (!children || children.length === 0) {
+      tree.children = [caret];
+      return;
+    }
+    const last = children[children.length - 1];
+    if (last.type === 'element' && last.children) {
+      last.children.push(caret);
+    } else {
+      children.push(caret);
+    }
+  };
+}
 
 const CITATION_RE = /\[(\d+)\]/g;
 
