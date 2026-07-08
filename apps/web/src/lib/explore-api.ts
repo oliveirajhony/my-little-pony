@@ -1,5 +1,22 @@
-import { apiFetch, apiFetchStream } from './api-client';
+import { apiFetch, apiFetchBlob, apiFetchStream } from './api-client';
 import { parseSseStream } from './sse';
+
+export type ExportFormat = 'pdf' | 'md';
+
+/**
+ * Exporta a resposta como PDF ou Markdown. O backend gera na hora e devolve os
+ * bytes (efêmero — nada persistido). O conteúdo (markdown) vai no request.
+ */
+export function exportAnswer(input: {
+  format: ExportFormat;
+  title?: string;
+  content: string;
+}): Promise<Blob> {
+  return apiFetchBlob('/explore/export', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
 
 /**
  * Cliente da API de RAG generativo ("Explorar") do backend Nest. `POST /explore`

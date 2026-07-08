@@ -20,12 +20,20 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useArquivosStore } from '../../lib/arquivos-store';
 import { useDocuments } from '../../lib/documents-store';
+import { downloadBlob } from '../../lib/download';
+import { type ExportFormat, exportAnswer } from '../../lib/explore-api';
 import {
   type Chat,
   type ChatMessage,
@@ -79,7 +87,12 @@ export function ExploreView() {
             fileCount={mounted ? filesCount : 0}
           />
         ) : (
-          <Conversation messages={messages} onSend={sendMessage} sending={sending} />
+          <Conversation
+            messages={messages}
+            onSend={sendMessage}
+            sending={sending}
+            chatTitle={active?.title}
+          />
         )}
       </div>
     </div>
@@ -238,10 +251,12 @@ function Conversation({
   messages,
   onSend,
   sending,
+  chatTitle,
 }: {
   messages: ChatMessage[];
   onSend: (text: string) => void;
   sending: boolean;
+  chatTitle?: string;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const stopGeneration = useExploreStore((s) => s.stopGeneration);
@@ -273,7 +288,7 @@ function Conversation({
       <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-8">
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble key={message.id} message={message} chatTitle={chatTitle} />
           ))}
           <div ref={bottomRef} />
         </div>
@@ -313,7 +328,13 @@ const STAGE_LABEL: Record<StreamStage, string> = {
 
 // memo: durante o streaming a lista de mensagens muda a cada flush (~60ms); sem
 // memo, TODAS as bolhas re-renderizariam. Só a que muda de fato re-renderiza.
-export const MessageBubble = memo(function MessageBubble({ message }: { message: ChatMessage }) {
+export const MessageBubble = memo(function MessageBubble({
+  message,
+  chatTitle,
+}: {
+  message: ChatMessage;
+  chatTitle?: string;
+}) {
   const sources = message.sources ?? [];
 
   // Mapeia `[n]` (transformado em <cite> pelo rehypeCitations) para a fonte
@@ -380,7 +401,9 @@ export const MessageBubble = memo(function MessageBubble({ message }: { message:
             {sources.length > 0 && <CompactSources sources={sources} />}
 
             {/* Barra de ações — só na resposta concluída (não durante o stream). */}
-            {!message.streaming && message.content && <MessageActions content={message.content} />}
+            {!message.streaming && message.content && (
+              <MessageActions content={message.content} title={chatTitle} />
+            )}
           </>
         )}
       </div>
@@ -537,21 +560,52 @@ function StreamCaret() {
   );
 }
 
-/** Barra de ações da resposta concluída: copiar (Baixar reservado p/ Fatia 2). */
-function MessageActions({ content }: { content: string }) {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+/** Nome de arquivo do download (cosmético — o `download` do <a> é lenient). */
+function downloadName(title: string | undefined, format: ExportFormat): string {
+  const base = (title?.trim() || 'Resposta').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Resposta';
+  return `${base}.${format}`;
+}
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+/** Barra de ações da resposta concluída: copiar e baixar (PDF / Markdown). */
+function MessageActions({ content, title }: { content: string; title?: string }) {
+  const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState<ExportFormat | null>(null);
+  const [failed, setFailed] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const failTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(
+    () => () => {
+      clearTimeout(copyTimer.current);
+      clearTimeout(failTimer.current);
+    },
+    [],
+  );
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(content);
       setCopied(true);
-      clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopied(false), 2000);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard indisponível (permissão / contexto inseguro) — falha silenciosa.
+    }
+  }
+
+  async function download(format: ExportFormat) {
+    if (downloading) return;
+    setFailed(false);
+    setDownloading(format);
+    try {
+      const blob = await exportAnswer({ format, title, content });
+      downloadBlob(blob, downloadName(title, format));
+    } catch {
+      setFailed(true);
+      clearTimeout(failTimer.current);
+      failTimer.current = setTimeout(() => setFailed(false), 2500);
+    } finally {
+      setDownloading(null);
     }
   }
 
@@ -568,19 +622,30 @@ function MessageActions({ content }: { content: string }) {
         {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
         {copied ? 'Copiado' : 'Copiar'}
       </Button>
-      {/* Slot do Baixar (Fatia 2 / #49) — reservado, desabilitado por ora. */}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled
-        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
-        aria-label="Baixar resposta (em breve)"
-        title="Em breve"
-      >
-        <Download className="size-3.5" />
-        Baixar
-      </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={downloading !== null}
+            className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+            aria-label="Baixar resposta"
+          >
+            {downloading ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Download className="size-3.5" />
+            )}
+            {failed ? 'Falhou' : 'Baixar'}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={() => download('pdf')}>PDF</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => download('md')}>Markdown</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

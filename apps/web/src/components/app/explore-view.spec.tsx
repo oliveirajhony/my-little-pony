@@ -14,6 +14,14 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+// A exportação bate na API + dispara download no browser — isola os dois.
+vi.mock('../../lib/explore-api', () => ({
+  exportAnswer: vi.fn().mockResolvedValue(new Blob(['x'])),
+}));
+vi.mock('../../lib/download', () => ({ downloadBlob: vi.fn() }));
+
+import { downloadBlob } from '../../lib/download';
+import { exportAnswer } from '../../lib/explore-api';
 import { MessageBubble } from './explore-view';
 
 const source = (over: Partial<ChatSource> = {}): ChatSource => ({
@@ -157,9 +165,39 @@ describe('MessageBubble — barra de ações / copiar (#48)', () => {
     expect(await screen.findByText('Copiado')).toBeInTheDocument();
   });
 
-  it('reserva o slot "Baixar" desabilitado (Fatia 2)', () => {
-    render(<MessageBubble message={assistant({ content: 'x' })} />);
-    expect(screen.getByRole('button', { name: /Baixar/ })).toBeDisabled();
+  it('baixa a resposta em PDF pelo menu Baixar (formato + título + conteúdo)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(exportAnswer).mockClear();
+    vi.mocked(downloadBlob).mockClear();
+    render(
+      <MessageBubble
+        message={assistant({ content: 'Resposta final' })}
+        chatTitle="Minha pergunta"
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Baixar resposta' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'PDF' }));
+
+    expect(exportAnswer).toHaveBeenCalledWith({
+      format: 'pdf',
+      title: 'Minha pergunta',
+      content: 'Resposta final',
+    });
+    await waitFor(() => expect(downloadBlob).toHaveBeenCalled());
+    // o nome do arquivo sai do título do chat
+    expect(vi.mocked(downloadBlob).mock.calls[0][1]).toBe('Minha pergunta.pdf');
+  });
+
+  it('oferece Markdown como opção de download', async () => {
+    const user = userEvent.setup();
+    vi.mocked(exportAnswer).mockClear();
+    render(<MessageBubble message={assistant({ content: 'x' })} chatTitle="T" />);
+
+    await user.click(screen.getByRole('button', { name: 'Baixar resposta' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Markdown' }));
+
+    expect(exportAnswer).toHaveBeenCalledWith({ format: 'md', title: 'T', content: 'x' });
   });
 
   it('não mostra a barra de ações enquanto a resposta está sendo gerada', () => {
