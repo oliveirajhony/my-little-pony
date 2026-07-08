@@ -168,8 +168,10 @@ services:
   ollama:
     image: ollama/ollama:latest
     profiles: ["rag"]
+    # Offset +10 no host (como os demais serviços) para não colidir com um Ollama
+    # nativo em 11434. Os containers falam pelo DNS interno `ollama:11434`.
     ports:
-      - "11434:11434"
+      - "11444:11434"
     volumes:
       - mlp_ollama:/root/.ollama
     # GPU: opt-in pelo overlay docker-compose.gpu.yml (requer NVIDIA Container
