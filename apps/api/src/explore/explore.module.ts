@@ -8,12 +8,14 @@ import { Module } from '@nestjs/common';
 import { APP_CONFIG } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
 import { ANSWER_GATEWAY, DOCUMENT_REPOSITORY, SOURCE_FILE_REPOSITORY } from '../tokens';
+import { AnswerExporter } from './answer-exporter';
 import { ExploreController } from './explore.controller';
 import { HttpAnswerGateway } from './http-answer.gateway';
 
 @Module({
   controllers: [ExploreController],
   providers: [
+    AnswerExporter,
     {
       provide: ANSWER_GATEWAY,
       inject: [APP_CONFIG],

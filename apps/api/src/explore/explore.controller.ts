@@ -3,9 +3,10 @@ import { AnswerQuestion, type ExploreAnswer } from '@my-little-pony/core';
 import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import type { Response } from 'express';
 import { AccessTokenGuard, type AuthUser, CurrentUser } from '../auth/access-token.guard';
+import { AnswerExporter, type ExportFormat } from './answer-exporter';
 
 const SAFE_STREAM_ERROR = 'Não consegui responder agora. Tente novamente em instantes.';
 // Ping periódico durante silêncios (LLM em CPU) para proxies/LBs não derrubarem
@@ -18,6 +19,23 @@ export class ExploreRequest {
   // REMOVE este campo do body — a pergunta chegaria vazia ao use case.
   @IsString()
   q!: string;
+}
+
+export class ExportAnswerRequest {
+  @ApiProperty({ enum: ['pdf', 'md'], description: 'Formato do arquivo' })
+  // Decorators obrigatórios: sem eles o ValidationPipe (whitelist) remove o campo.
+  @IsIn(['pdf', 'md'])
+  format!: ExportFormat;
+
+  @ApiProperty({ description: 'Markdown da resposta a exportar' })
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
+
+  @ApiProperty({ required: false, description: 'Título (vira o nome do arquivo)' })
+  @IsOptional()
+  @IsString()
+  title?: string;
 }
 
 export class ExploreSourceResponse {
@@ -57,13 +75,34 @@ export class ExploreResponse {
 @Controller('explore')
 @UseGuards(AccessTokenGuard)
 export class ExploreController {
-  constructor(private readonly answerQuestion: AnswerQuestion) {}
+  constructor(
+    private readonly answerQuestion: AnswerQuestion,
+    private readonly exporter: AnswerExporter,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'RAG generativo sobre documentos e arquivos do usuário' })
   @ApiOkResponse({ type: ExploreResponse })
   ask(@CurrentUser() user: AuthUser, @Body() body: ExploreRequest): Promise<ExploreAnswer> {
     return this.answerQuestion.execute({ ownerId: user.id, q: body.q ?? '' });
+  }
+
+  /**
+   * Exporta a resposta como PDF ou Markdown. Efêmero: gera na hora e devolve os
+   * bytes (nada persistido). Rota autenticada — o conteúdo vem do próprio cliente.
+   */
+  @Post('export')
+  @ApiOperation({ summary: 'Baixa a resposta como PDF ou Markdown (efêmero)' })
+  async export(@Body() body: ExportAnswerRequest, @Res() res: Response): Promise<void> {
+    const file = await this.exporter.export({
+      format: body.format,
+      title: body.title,
+      content: body.content,
+    });
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.setHeader('Content-Length', String(file.bytes.byteLength));
+    res.end(Buffer.from(file.bytes));
   }
 
   /**
