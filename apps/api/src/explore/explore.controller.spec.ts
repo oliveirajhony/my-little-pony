@@ -1,7 +1,11 @@
 import type { AnswerQuestion, ExploreStreamEvent } from '@my-little-pony/core';
 import { ValidationPipe } from '@nestjs/common';
 import type { Response } from 'express';
+import type { AnswerExporter } from './answer-exporter';
 import { ExploreController, ExploreRequest } from './explore.controller';
+
+// Estes testes exercitam só o stream; o exporter nunca é chamado aqui.
+const stubExporter = {} as unknown as AnswerExporter;
 
 // Regressão: o ValidationPipe global usa whitelist:true, que REMOVE qualquer
 // campo do body sem decorator do class-validator. Sem @IsString() no `q`, a
@@ -76,7 +80,7 @@ describe('ExploreController.stream (SSE)', () => {
       { type: 'done', grounded: true },
     ];
     const r = fakeRes();
-    const controller = new ExploreController(useCaseYielding(events));
+    const controller = new ExploreController(useCaseYielding(events), stubExporter);
 
     await controller.stream({ id: 'u1' }, { q: 'oi' }, r.res);
 
@@ -93,6 +97,7 @@ describe('ExploreController.stream (SSE)', () => {
       useCaseYielding([{ type: 'done', grounded: false }], (input) => {
         seen = input as { ownerId: string; q: string };
       }),
+      stubExporter,
     );
 
     // Corpo tenta injetar outro ownerId — deve ser ignorado.
@@ -110,7 +115,7 @@ describe('ExploreController.stream (SSE)', () => {
       },
     } as unknown as AnswerQuestion;
     const r = fakeRes();
-    const controller = new ExploreController(throwing);
+    const controller = new ExploreController(throwing, stubExporter);
 
     await controller.stream({ id: 'u1' }, { q: 'oi' }, r.res);
 
@@ -131,7 +136,7 @@ describe('ExploreController.stream (SSE)', () => {
       },
     } as unknown as AnswerQuestion;
     const r = fakeRes();
-    const controller = new ExploreController(useCase);
+    const controller = new ExploreController(useCase, stubExporter);
 
     const pending = controller.stream({ id: 'u1' }, { q: 'oi' }, r.res);
     // cliente desconecta no meio da geração:
