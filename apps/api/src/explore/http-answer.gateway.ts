@@ -1,4 +1,9 @@
-import type { AnswerGateway, AnswerStreamEvent, GatewayAnswer } from '@my-little-pony/core';
+import type {
+  AnswerGateway,
+  AnswerStreamEvent,
+  GatewayAnswer,
+  LlmConfig,
+} from '@my-little-pony/core';
 import { PythonServiceClient, parseSse } from '../http/python-service.client';
 
 const NOT_CONFIGURED: GatewayAnswer = {
@@ -45,12 +50,13 @@ export class HttpAnswerGateway implements AnswerGateway {
     this.client = new PythonServiceClient(serviceUrl, serviceToken, timeoutMs);
   }
 
-  async answer(input: { ownerId: string; q: string }): Promise<GatewayAnswer> {
+  async answer(input: { ownerId: string; q: string; llm?: LlmConfig }): Promise<GatewayAnswer> {
     if (!this.client.configured) return NOT_CONFIGURED; // not deployed yet — expected
     try {
       const body = await this.client.postJson<AnswerBody>('/answer', {
         ownerId: input.ownerId,
         query: input.q,
+        llm: input.llm,
       });
       return {
         answer: body.answer,
@@ -71,6 +77,7 @@ export class HttpAnswerGateway implements AnswerGateway {
     ownerId: string;
     q: string;
     signal?: AbortSignal;
+    llm?: LlmConfig;
   }): AsyncIterable<AnswerStreamEvent> {
     if (!this.client.configured) {
       // Degrada como uma resposta ungrounded (mesma UX do síncrono).
@@ -84,7 +91,7 @@ export class HttpAnswerGateway implements AnswerGateway {
     try {
       response = await this.client.postStream(
         '/answer/stream',
-        { ownerId: input.ownerId, query: input.q },
+        { ownerId: input.ownerId, query: input.q, llm: input.llm },
         input.signal,
       );
     } catch {

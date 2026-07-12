@@ -61,6 +61,14 @@ const MAP: Record<DomainErrorCode, { status: number; message: string }> = {
     message: 'Envie um arquivo válido (PDF, DOCX, DOC, MD ou HTML).',
   },
   'file-not-found': { status: HttpStatus.NOT_FOUND, message: 'Arquivo não encontrado.' },
+  'invalid-llm-provider': {
+    status: HttpStatus.BAD_REQUEST,
+    message: 'Confira os dados do provedor de IA.',
+  },
+  'llm-provider-not-found': {
+    status: HttpStatus.NOT_FOUND,
+    message: 'Provedor de IA não encontrado.',
+  },
 };
 
 @Catch(DomainError)

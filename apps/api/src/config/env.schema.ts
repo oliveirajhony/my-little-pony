@@ -12,6 +12,9 @@ export const EnvSchema = z.object({
   JWT_ACCESS_SECRET: secret,
   JWT_REFRESH_SECRET: secret,
   INTERNAL_API_TOKEN: secret,
+  // Cifra as chaves de API dos provedores de LLM configurados pelo usuário
+  // (AES-256-GCM). Reversível — o servidor decripta para chamar o provedor.
+  PROVIDER_KEY_ENCRYPTION_KEY: secret,
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
   // Allowed browser origin for CORS (the web app). Not a secret.
@@ -51,6 +54,7 @@ export type AppConfig = {
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
   internalApiToken: string;
+  providerKeyEncryptionKey: string;
   jwtAccessTtl: string;
   jwtRefreshTtl: string;
   webOrigin: string;
@@ -90,6 +94,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     jwtAccessSecret: env_.JWT_ACCESS_SECRET,
     jwtRefreshSecret: env_.JWT_REFRESH_SECRET,
     internalApiToken: env_.INTERNAL_API_TOKEN,
+    providerKeyEncryptionKey: env_.PROVIDER_KEY_ENCRYPTION_KEY,
     jwtAccessTtl: env_.JWT_ACCESS_TTL,
     jwtRefreshTtl: env_.JWT_REFRESH_TTL,
     webOrigin: env_.WEB_ORIGIN,

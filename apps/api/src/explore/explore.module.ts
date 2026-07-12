@@ -7,12 +7,15 @@ import {
 import { Module } from '@nestjs/common';
 import { APP_CONFIG } from '../config/config.module';
 import type { AppConfig } from '../config/env.schema';
+import { LlmProvidersModule } from '../llm-providers/llm-providers.module';
 import { ANSWER_GATEWAY, DOCUMENT_REPOSITORY, SOURCE_FILE_REPOSITORY } from '../tokens';
 import { AnswerExporter } from './answer-exporter';
 import { ExploreController } from './explore.controller';
 import { HttpAnswerGateway } from './http-answer.gateway';
 
 @Module({
+  // LlmProvidersModule exporta o ResolveActiveLlmConfig usado na geração.
+  imports: [LlmProvidersModule],
   controllers: [ExploreController],
   providers: [
     AnswerExporter,

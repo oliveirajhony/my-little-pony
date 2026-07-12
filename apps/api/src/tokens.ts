@@ -19,3 +19,5 @@ export const PERSONAL_ACCESS_TOKEN_REPOSITORY = Symbol('PersonalAccessTokenRepos
 export const ACCESS_TOKEN_GENERATOR = Symbol('AccessTokenGenerator');
 export const SOURCE_FILE_REPOSITORY = Symbol('SourceFileRepository');
 export const SOURCE_FILE_STORAGE = Symbol('SourceFileStorage');
+export const LLM_PROVIDER_REPOSITORY = Symbol('LlmProviderRepository');
+export const ENCRYPTOR = Symbol('Encryptor');

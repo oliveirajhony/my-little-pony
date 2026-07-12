@@ -9,6 +9,7 @@ import { ExploreModule } from '../explore/explore.module';
 import { HealthController } from '../health/health.controller';
 import { DomainExceptionFilter } from '../http/domain-exception.filter';
 import { InternalModule } from '../internal/internal.module';
+import { LlmProvidersModule } from '../llm-providers/llm-providers.module';
 import { MailModule } from '../mail/mail.module';
 import { McpModule } from '../mcp/mcp.module';
 import { MessagesModule } from '../messages/messages.module';
@@ -41,6 +42,7 @@ import { UsersModule } from '../users/users.module';
     DocumentsModule,
     PublicModule,
     SearchModule,
+    LlmProvidersModule,
     ExploreModule,
     InternalModule,
     MessagesModule,
