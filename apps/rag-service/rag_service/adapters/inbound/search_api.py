@@ -49,10 +49,21 @@ class SearchHitResponse(BaseModel):
     kind: str = "native"
 
 
+class LlmConfigModel(BaseModel):
+    """Provedor de LLM da requisição (do provedor ativo do usuário no Nest)."""
+
+    backend: str  # "openai" | "ollama"
+    baseUrl: str = ""
+    apiKey: str | None = None
+    model: str
+
+
 class AnswerRequest(BaseModel):
     query: str
     ownerId: str
     filters: dict = Field(default_factory=dict)
+    # Provedor de LLM escolhido pelo usuário; ausente => default do env.
+    llm: LlmConfigModel | None = None
 
 
 class AnswerSourceResponse(BaseModel):
@@ -150,11 +161,10 @@ def search(
     response_model=AnswerResponse,
     dependencies=[Depends(require_service_token)],
 )
-async def answer(
-    request: AnswerRequest,
-    use_case: AnswerQuestion = Depends(get_answer_use_case),
-) -> AnswerResponse:
+async def answer(request: AnswerRequest) -> AnswerResponse:
     query = SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
+    # Use case por requisição: o generator vem do provedor do usuário (ou env).
+    use_case = _composition.answer_question_for(request.llm)
     # Serializa pelo mesmo guard do streaming: sem isto, /answer roda no
     # threadpool e bate no LLM único em paralelo, driblando o limite de
     # concorrência que o /answer/stream respeita.
@@ -183,9 +193,9 @@ async def answer(
 async def answer_stream(
     request: AnswerRequest,
     http_request: Request,
-    use_case: AnswerQuestion = Depends(get_answer_use_case),
 ) -> StreamingResponse:
     query = SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
+    use_case = _composition.answer_question_for(request.llm)
     idle_timeout = _settings.stream_idle_timeout_s
 
     async def events():

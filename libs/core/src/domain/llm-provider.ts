@@ -105,4 +105,9 @@ export class LlmProvider {
     const { apiKeyEncrypted: _omit, ...view } = this.props;
     return { ...view };
   }
+
+  /** Props completas (com o segredo cifrado) — SÓ para a persistência. */
+  toProps(): LlmProviderProps {
+    return { ...this.props };
+  }
 }

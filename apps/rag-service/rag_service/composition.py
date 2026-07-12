@@ -137,12 +137,42 @@ class Composition:
         return DeindexDocument(index=self.index())
 
     def answer_question(self) -> AnswerQuestion:
+        return self._answer_question_with(self.answer_generator())
+
+    def answer_generator_for(self, llm) -> AnswerGenerator:
+        """Generator da requisição a partir do provedor do usuário. `llm=None`
+        cai no generator do env (singleton). Reusa nada além do generator — os
+        embedders/reranker/index continuam sendo os singletons pesados."""
+        if llm is None:
+            return self.answer_generator()
+        if llm.backend == "openai":
+            return OpenAiAnswerGenerator(
+                base_url=llm.baseUrl or self._s.llm_api_base,
+                model=llm.model,
+                api_key=llm.apiKey or "",
+                timeout=self._s.llm_api_timeout,
+            )
+        # Ollama: a base do usuário pode não incluir o path do chat.
+        url = (llm.baseUrl or "").strip()
+        if url and "/api/chat" not in url:
+            url = f"{url.rstrip('/')}/api/chat"
+        return OllamaAnswerGenerator(
+            url=url or self._s.ollama_url,
+            model=llm.model,
+            timeout=self._s.ollama_timeout,
+        )
+
+    def answer_question_for(self, llm) -> AnswerQuestion:
+        """AnswerQuestion com o generator do provedor do usuário (reusa retrieval)."""
+        return self._answer_question_with(self.answer_generator_for(llm))
+
+    def _answer_question_with(self, generator: AnswerGenerator) -> AnswerQuestion:
         return AnswerQuestion(
             dense=self.dense(),
             sparse=self.sparse(),
             index=self.index(),
             reranker=self.reranker(),
-            generator=self.answer_generator(),
+            generator=generator,
             min_score=self._s.answer_min_score,
             top_k=self._s.answer_top_k,
             max_context_chars=self._s.answer_max_context_chars,
