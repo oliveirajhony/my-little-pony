@@ -1,4 +1,5 @@
 import { KeyboardShortcuts } from '../../../components/app/settings/keyboard-shortcuts';
+import { LlmProvidersSection } from '../../../components/app/settings/llm-providers-section';
 import { PasswordForm } from '../../../components/app/settings/password-form';
 import { ProfileForm } from '../../../components/app/settings/profile-form';
 import { SettingsSection } from '../../../components/app/settings/settings-section';
@@ -26,6 +27,13 @@ export default function SettingsPage() {
           description="Credenciais para agentes externos operarem sua conta pelo servidor MCP."
         >
           <TokensSection />
+        </SettingsSection>
+
+        <SettingsSection
+          title="Provedores de IA"
+          description="Modelo e chave que a geração do Explorar usa. A chave é cifrada e nunca reexibida."
+        >
+          <LlmProvidersSection />
         </SettingsSection>
 
         <SettingsSection
