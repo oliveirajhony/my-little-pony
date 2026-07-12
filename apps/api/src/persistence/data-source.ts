@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv';
 import { DataSource, type DataSourceOptions } from 'typeorm';
 import { ContactMessageOrmEntity } from './contact-message.orm-entity';
 import { DocumentOrmEntity } from './document.orm-entity';
+import { LlmProviderOrmEntity } from './llm-provider.orm-entity';
 import { CreateUsers1751673600000 } from './migrations/1751673600000-CreateUsers';
 import { CreateDocuments1751760000000 } from './migrations/1751760000000-CreateDocuments';
 import { CreateContactMessages1751846400000 } from './migrations/1751846400000-CreateContactMessages';
@@ -10,6 +11,7 @@ import { AddDocumentPageConfig1751932800000 } from './migrations/1751932800000-A
 import { CreatePersonalAccessTokens1751933000000 } from './migrations/1751933000000-CreatePersonalAccessTokens';
 import { CreateSourceFiles1751933100000 } from './migrations/1751933100000-CreateSourceFiles';
 import { AddSourceFileIndexColumns1751933200000 } from './migrations/1751933200000-AddSourceFileIndexColumns';
+import { CreateLlmProviders1751933300000 } from './migrations/1751933300000-CreateLlmProviders';
 import { PersonalAccessTokenOrmEntity } from './personal-access-token.orm-entity';
 import { SourceFileOrmEntity } from './source-file.orm-entity';
 import { UserOrmEntity } from './user.orm-entity';
@@ -27,6 +29,7 @@ export function buildTypeOrmOptions(databaseUrl: string): DataSourceOptions {
       ContactMessageOrmEntity,
       PersonalAccessTokenOrmEntity,
       SourceFileOrmEntity,
+      LlmProviderOrmEntity,
     ],
     migrations: [
       CreateUsers1751673600000,
@@ -36,6 +39,7 @@ export function buildTypeOrmOptions(databaseUrl: string): DataSourceOptions {
       CreatePersonalAccessTokens1751933000000,
       CreateSourceFiles1751933100000,
       AddSourceFileIndexColumns1751933200000,
+      CreateLlmProviders1751933300000,
     ],
     synchronize: false,
   };

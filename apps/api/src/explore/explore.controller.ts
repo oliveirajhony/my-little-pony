@@ -1,5 +1,5 @@
 import { once } from 'node:events';
-import { AnswerQuestion, type ExploreAnswer } from '@my-little-pony/core';
+import { AnswerQuestion, type ExploreAnswer, ResolveActiveLlmConfig } from '@my-little-pony/core';
 import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -78,13 +78,16 @@ export class ExploreController {
   constructor(
     private readonly answerQuestion: AnswerQuestion,
     private readonly exporter: AnswerExporter,
+    private readonly resolveLlm: ResolveActiveLlmConfig,
   ) {}
 
   @Post()
   @ApiOperation({ summary: 'RAG generativo sobre documentos e arquivos do usuário' })
   @ApiOkResponse({ type: ExploreResponse })
-  ask(@CurrentUser() user: AuthUser, @Body() body: ExploreRequest): Promise<ExploreAnswer> {
-    return this.answerQuestion.execute({ ownerId: user.id, q: body.q ?? '' });
+  async ask(@CurrentUser() user: AuthUser, @Body() body: ExploreRequest): Promise<ExploreAnswer> {
+    // Provedor de LLM ativo do usuário (ou undefined => default do serviço).
+    const llm = (await this.resolveLlm.execute({ ownerId: user.id })) ?? undefined;
+    return this.answerQuestion.execute({ ownerId: user.id, q: body.q ?? '', llm });
   }
 
   /**
@@ -128,6 +131,10 @@ export class ExploreController {
     const abort = new AbortController();
     res.on('close', () => abort.abort()); // cliente saiu → corta a geração upstream
 
+    // Resolve DEPOIS de registrar o close-handler (senão um disconnect durante
+    // o lookup não abortaria). Provedor ativo do usuário (ou default do serviço).
+    const llm = (await this.resolveLlm.execute({ ownerId: user.id })) ?? undefined;
+
     // Respeita backpressure: se o buffer do socket encheu (cliente lento), espera
     // o 'drain' antes de puxar o próximo evento — evita bufferização ilimitada.
     const write = async (chunk: string): Promise<void> => {
@@ -148,6 +155,7 @@ export class ExploreController {
         ownerId: user.id, // SEMPRE do JWT
         q: body.q ?? '',
         signal: abort.signal,
+        llm,
       })) {
         if (abort.signal.aborted) break;
         await write(`data: ${JSON.stringify(event)}\n\n`);

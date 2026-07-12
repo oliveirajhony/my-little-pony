@@ -1,4 +1,8 @@
-import type { AnswerQuestion, ExploreStreamEvent } from '@my-little-pony/core';
+import type {
+  AnswerQuestion,
+  ExploreStreamEvent,
+  ResolveActiveLlmConfig,
+} from '@my-little-pony/core';
 import { ValidationPipe } from '@nestjs/common';
 import type { Response } from 'express';
 import type { AnswerExporter } from './answer-exporter';
@@ -6,6 +10,8 @@ import { ExploreController, ExploreRequest } from './explore.controller';
 
 // Estes testes exercitam só o stream; o exporter nunca é chamado aqui.
 const stubExporter = {} as unknown as AnswerExporter;
+// Sem provedor ativo → a geração usa o default do serviço.
+const stubResolveLlm = { execute: async () => null } as unknown as ResolveActiveLlmConfig;
 
 // Regressão: o ValidationPipe global usa whitelist:true, que REMOVE qualquer
 // campo do body sem decorator do class-validator. Sem @IsString() no `q`, a
@@ -80,7 +86,7 @@ describe('ExploreController.stream (SSE)', () => {
       { type: 'done', grounded: true },
     ];
     const r = fakeRes();
-    const controller = new ExploreController(useCaseYielding(events), stubExporter);
+    const controller = new ExploreController(useCaseYielding(events), stubExporter, stubResolveLlm);
 
     await controller.stream({ id: 'u1' }, { q: 'oi' }, r.res);
 
@@ -98,6 +104,7 @@ describe('ExploreController.stream (SSE)', () => {
         seen = input as { ownerId: string; q: string };
       }),
       stubExporter,
+      stubResolveLlm,
     );
 
     // Corpo tenta injetar outro ownerId — deve ser ignorado.
@@ -115,7 +122,7 @@ describe('ExploreController.stream (SSE)', () => {
       },
     } as unknown as AnswerQuestion;
     const r = fakeRes();
-    const controller = new ExploreController(throwing, stubExporter);
+    const controller = new ExploreController(throwing, stubExporter, stubResolveLlm);
 
     await controller.stream({ id: 'u1' }, { q: 'oi' }, r.res);
 
@@ -131,12 +138,13 @@ describe('ExploreController.stream (SSE)', () => {
     const useCase = {
       stream: async function* (input: { signal?: AbortSignal }) {
         signal = input.signal;
+        if (signal?.aborted) return; // já abortou antes do loop começar
         // trava até o abort — simula o LLM gerando enquanto o cliente sai.
         await new Promise<void>((resolve) => signal?.addEventListener('abort', () => resolve()));
       },
     } as unknown as AnswerQuestion;
     const r = fakeRes();
-    const controller = new ExploreController(useCase, stubExporter);
+    const controller = new ExploreController(useCase, stubExporter, stubResolveLlm);
 
     const pending = controller.stream({ id: 'u1' }, { q: 'oi' }, r.res);
     // cliente desconecta no meio da geração:

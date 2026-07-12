@@ -6,6 +6,7 @@ import type { AppConfig } from '../config/env.schema';
 import {
   CONTACT_MESSAGE_REPOSITORY,
   DOCUMENT_REPOSITORY,
+  LLM_PROVIDER_REPOSITORY,
   PERSONAL_ACCESS_TOKEN_REPOSITORY,
   SOURCE_FILE_REPOSITORY,
   USER_REPOSITORY,
@@ -13,10 +14,12 @@ import {
 import { ContactMessageOrmEntity } from './contact-message.orm-entity';
 import { buildTypeOrmOptions } from './data-source';
 import { DocumentOrmEntity } from './document.orm-entity';
+import { LlmProviderOrmEntity } from './llm-provider.orm-entity';
 import { PersonalAccessTokenOrmEntity } from './personal-access-token.orm-entity';
 import { SourceFileOrmEntity } from './source-file.orm-entity';
 import { TypeOrmContactMessageRepository } from './typeorm-contact-message.repository';
 import { TypeOrmDocumentRepository } from './typeorm-document.repository';
+import { TypeOrmLlmProviderRepository } from './typeorm-llm-provider.repository';
 import { TypeOrmPersonalAccessTokenRepository } from './typeorm-personal-access-token.repository';
 import { TypeOrmSourceFileRepository } from './typeorm-source-file.repository';
 import { TypeOrmUserRepository } from './typeorm-user.repository';
@@ -68,6 +71,12 @@ import { UserOrmEntity } from './user.orm-entity';
       useFactory: (dataSource: DataSource) =>
         new TypeOrmSourceFileRepository(dataSource.getRepository(SourceFileOrmEntity)),
     },
+    {
+      provide: LLM_PROVIDER_REPOSITORY,
+      inject: [getDataSourceToken()],
+      useFactory: (dataSource: DataSource) =>
+        new TypeOrmLlmProviderRepository(dataSource.getRepository(LlmProviderOrmEntity)),
+    },
   ],
   exports: [
     USER_REPOSITORY,
@@ -75,6 +84,7 @@ import { UserOrmEntity } from './user.orm-entity';
     CONTACT_MESSAGE_REPOSITORY,
     PERSONAL_ACCESS_TOKEN_REPOSITORY,
     SOURCE_FILE_REPOSITORY,
+    LLM_PROVIDER_REPOSITORY,
   ],
 })
 export class PersistenceModule {}

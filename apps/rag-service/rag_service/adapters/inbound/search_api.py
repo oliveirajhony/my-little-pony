@@ -49,10 +49,21 @@ class SearchHitResponse(BaseModel):
     kind: str = "native"
 
 
+class LlmConfigModel(BaseModel):
+    """Provedor de LLM da requisição (do provedor ativo do usuário no Nest)."""
+
+    backend: str  # "openai" | "ollama"
+    baseUrl: str = ""
+    apiKey: str | None = None
+    model: str
+
+
 class AnswerRequest(BaseModel):
     query: str
     ownerId: str
     filters: dict = Field(default_factory=dict)
+    # Provedor de LLM escolhido pelo usuário; ausente => default do env.
+    llm: LlmConfigModel | None = None
 
 
 class AnswerSourceResponse(BaseModel):
@@ -86,8 +97,11 @@ def get_search_use_case() -> SearchDocuments:
     return _composition.search_documents()
 
 
-def get_answer_use_case() -> AnswerQuestion:
-    return _composition.answer_question()
+def get_answer_use_case(request: AnswerRequest) -> AnswerQuestion:
+    # Use case por requisição: o generator vem do provedor do usuário
+    # (request.llm) ou, na ausência, do default do env. FastAPI lê o corpo uma
+    # única vez e o compartilha com o path operation.
+    return _composition.answer_question_for(request.llm)
 
 
 def require_service_token(authorization: str | None = Header(default=None)) -> None:

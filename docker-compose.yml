@@ -112,9 +112,13 @@ services:
       JWT_ACCESS_SECRET: ${MLP_JWT_ACCESS_SECRET:-dev_access_secret_change_me_0123456789abcd}
       JWT_REFRESH_SECRET: ${MLP_JWT_REFRESH_SECRET:-dev_refresh_secret_change_me_0123456789abc}
       INTERNAL_API_TOKEN: ${MLP_INTERNAL_API_TOKEN:-dev_internal_service_token_0123456789abcdef}
+      # Cifra as chaves de API dos provedores de LLM (write-only na config).
+      PROVIDER_KEY_ENCRYPTION_KEY: ${MLP_PROVIDER_KEY_ENCRYPTION_KEY:-dev_provider_key_encryption_change_me_0123456}
       # Busca/RAG: preenchido só quando o profile `rag` está ativo (senão degrada).
       SEARCH_SERVICE_URL: ${MLP_SEARCH_SERVICE_URL:-}
       SEARCH_SERVICE_TOKEN: ${MLP_SEARCH_SERVICE_TOKEN:-dev_search_service_token_0123456789abcd}
+      # /search é síncrono; o pipeline embed+rerank pode passar do default de 15s.
+      SEARCH_SERVICE_TIMEOUT_MS: ${MLP_SEARCH_SERVICE_TIMEOUT_MS:-15000}
     depends_on:
       postgres:
         condition: service_healthy

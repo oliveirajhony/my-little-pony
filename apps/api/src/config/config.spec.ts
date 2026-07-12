@@ -8,6 +8,7 @@ const base = {
   JWT_ACCESS_SECRET: 'a'.repeat(32),
   JWT_REFRESH_SECRET: 'b'.repeat(32),
   INTERNAL_API_TOKEN: 'c'.repeat(32),
+  PROVIDER_KEY_ENCRYPTION_KEY: 'd'.repeat(32),
   JWT_ACCESS_TTL: '15m',
   JWT_REFRESH_TTL: '7d',
 };
