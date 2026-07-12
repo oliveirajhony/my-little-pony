@@ -20,7 +20,9 @@ export type DomainErrorCode =
   | 'token-not-found'
   | 'insufficient-scope'
   | 'invalid-file'
-  | 'file-not-found';
+  | 'file-not-found'
+  | 'invalid-llm-provider'
+  | 'llm-provider-not-found';
 
 export class DomainError extends Error {
   constructor(readonly code: DomainErrorCode) {

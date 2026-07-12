@@ -1,4 +1,9 @@
-import type { AnswerGateway, DocumentRepository, SourceFileRepository } from './ports.js';
+import type {
+  AnswerGateway,
+  DocumentRepository,
+  LlmConfig,
+  SourceFileRepository,
+} from './ports.js';
 import type { SearchResultItem } from './search-use-cases.js';
 import { enrichSources } from './source-enricher.js';
 
@@ -33,11 +38,11 @@ export class AnswerQuestion {
     private readonly files: SourceFileRepository,
   ) {}
 
-  async execute(input: { ownerId: string; q: string }): Promise<ExploreAnswer> {
+  async execute(input: { ownerId: string; q: string; llm?: LlmConfig }): Promise<ExploreAnswer> {
     const query = input.q.trim();
     if (!query) return { answer: '', grounded: false, sources: [] };
 
-    const result = await this.gateway.answer({ ownerId: input.ownerId, q: query });
+    const result = await this.gateway.answer({ ownerId: input.ownerId, q: query, llm: input.llm });
     const sources = await enrichSources(result.sources, input.ownerId, {
       documents: this.documents,
       files: this.files,
@@ -54,6 +59,7 @@ export class AnswerQuestion {
     ownerId: string;
     q: string;
     signal?: AbortSignal;
+    llm?: LlmConfig;
   }): AsyncIterable<ExploreStreamEvent> {
     const query = input.q.trim();
     if (!query) {
@@ -64,6 +70,7 @@ export class AnswerQuestion {
       ownerId: input.ownerId,
       q: query,
       signal: input.signal,
+      llm: input.llm,
     })) {
       if (ev.type === 'sources') {
         const sources = await enrichSources(ev.sources, input.ownerId, {

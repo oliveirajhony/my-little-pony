@@ -1,5 +1,6 @@
 import type { ContactMessage } from '../domain/contact-message.js';
 import type { Document, DocumentStatus } from '../domain/document.js';
+import type { LlmBackend, LlmProvider } from '../domain/llm-provider.js';
 import type { PersonalAccessToken } from '../domain/personal-access-token.js';
 import type { SourceFile } from '../domain/source-file.js';
 import type { User } from '../domain/user.js';
@@ -108,6 +109,17 @@ export interface SearchGateway {
   search(input: { ownerId: string; q: string }): Promise<SearchHit[]>;
 }
 
+/**
+ * Config de LLM que a geração usa NAQUELA requisição — resolvida do provedor
+ * ativo do usuário (ou ausente => o serviço Python cai no default do env).
+ */
+export type LlmConfig = {
+  backend: LlmBackend;
+  baseUrl: string;
+  apiKey?: string;
+  model: string;
+};
+
 /** A generative answer grounded in retrieved sources (Python /answer). */
 export type GatewayAnswer = { answer: string; grounded: boolean; sources: SearchHit[] };
 
@@ -125,16 +137,35 @@ export type AnswerStreamEvent =
 
 /** Outbound port to the RAG answer service. The HTTP adapter proxies to Python. */
 export interface AnswerGateway {
-  answer(input: { ownerId: string; q: string }): Promise<GatewayAnswer>;
+  answer(input: { ownerId: string; q: string; llm?: LlmConfig }): Promise<GatewayAnswer>;
   /**
    * Streaming do RAG (SSE). `signal` permite cancelar a geração upstream quando
-   * o cliente desconecta (essencial com LLM em CPU).
+   * o cliente desconecta (essencial com LLM em CPU). `llm` (opcional) escolhe o
+   * provedor daquela requisição.
    */
   answerStream(input: {
     ownerId: string;
     q: string;
     signal?: AbortSignal;
+    llm?: LlmConfig;
   }): AsyncIterable<AnswerStreamEvent>;
+}
+
+/** Criptografia simétrica reversível para segredos (ex.: chave de API do LLM). */
+export interface Encryptor {
+  encrypt(plain: string): string;
+  decrypt(cipher: string): string;
+}
+
+/** Repositório dos provedores de LLM configurados por usuário. */
+export interface LlmProviderRepository {
+  listByOwner(ownerId: string): Promise<LlmProvider[]>;
+  findById(id: string): Promise<LlmProvider | null>;
+  findActive(ownerId: string): Promise<LlmProvider | null>;
+  save(provider: LlmProvider): Promise<void>;
+  delete(id: string): Promise<void>;
+  /** Desativa todos os provedores do dono (usado ao ativar outro). */
+  deactivateAllForOwner(ownerId: string): Promise<void>;
 }
 
 /** Opaque refresh tokens stored server-side (Redis adapter) with a TTL. */

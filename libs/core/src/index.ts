@@ -41,6 +41,14 @@ export {
   type ExploreStreamEvent,
 } from './application/explore-use-cases.js';
 export {
+  ActivateLlmProvider,
+  AddLlmProvider,
+  apiKeyHint,
+  ListLlmProviders,
+  RemoveLlmProvider,
+  ResolveActiveLlmConfig,
+} from './application/llm-provider-use-cases.js';
+export {
   AuthenticatePersonalAccessToken,
   type CreatedAccessToken,
   CreatePersonalAccessToken,
@@ -66,11 +74,14 @@ export type {
   DocumentQuery,
   DocumentRepository,
   EmailSender,
+  Encryptor,
   EventPublisher,
   GatewayAnswer,
   GeneratedAccessToken,
   IdGenerator,
   IndexRequested,
+  LlmConfig,
+  LlmProviderRepository,
   PasswordHasher,
   PdfRenderer,
   PersonalAccessTokenRepository,
@@ -109,6 +120,13 @@ export {
   type IndexStatus,
 } from './domain/document.js';
 export { DomainError, type DomainErrorCode } from './domain/errors.js';
+export {
+  LLM_BACKENDS,
+  type LlmBackend,
+  LlmProvider,
+  type LlmProviderProps,
+  type LlmProviderView,
+} from './domain/llm-provider.js';
 export {
   clonePageConfig,
   DEFAULT_PAGE_CONFIG,
