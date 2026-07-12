@@ -97,8 +97,11 @@ def get_search_use_case() -> SearchDocuments:
     return _composition.search_documents()
 
 
-def get_answer_use_case() -> AnswerQuestion:
-    return _composition.answer_question()
+def get_answer_use_case(request: AnswerRequest) -> AnswerQuestion:
+    # Use case por requisição: o generator vem do provedor do usuário
+    # (request.llm) ou, na ausência, do default do env. FastAPI lê o corpo uma
+    # única vez e o compartilha com o path operation.
+    return _composition.answer_question_for(request.llm)
 
 
 def require_service_token(authorization: str | None = Header(default=None)) -> None:
@@ -161,10 +164,11 @@ def search(
     response_model=AnswerResponse,
     dependencies=[Depends(require_service_token)],
 )
-async def answer(request: AnswerRequest) -> AnswerResponse:
+async def answer(
+    request: AnswerRequest,
+    use_case: AnswerQuestion = Depends(get_answer_use_case),
+) -> AnswerResponse:
     query = SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
-    # Use case por requisição: o generator vem do provedor do usuário (ou env).
-    use_case = _composition.answer_question_for(request.llm)
     # Serializa pelo mesmo guard do streaming: sem isto, /answer roda no
     # threadpool e bate no LLM único em paralelo, driblando o limite de
     # concorrência que o /answer/stream respeita.
@@ -193,9 +197,9 @@ async def answer(request: AnswerRequest) -> AnswerResponse:
 async def answer_stream(
     request: AnswerRequest,
     http_request: Request,
+    use_case: AnswerQuestion = Depends(get_answer_use_case),
 ) -> StreamingResponse:
     query = SearchQuery(query=request.query, owner_id=request.ownerId, filters=request.filters)
-    use_case = _composition.answer_question_for(request.llm)
     idle_timeout = _settings.stream_idle_timeout_s
 
     async def events():

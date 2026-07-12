@@ -47,6 +47,8 @@ def test_ollama_backend_appends_chat_path(monkeypatch):
 def test_none_falls_back_to_env_generator(monkeypatch):
     monkeypatch.setenv("RAG_LLM_BACKEND", "openai")
     monkeypatch.setenv("RAG_LLM_MODEL", "env-model")
+    # backend openai exige a base no env (validação do Settings).
+    monkeypatch.setenv("RAG_LLM_API_BASE", "https://api.example.com/v1")
     comp = make_composition(monkeypatch)
 
     gen = comp.answer_generator_for(None)
